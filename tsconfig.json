@@ -14,16 +14,16 @@
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "types": ["node"]
+    "types": ["node", "jest"]
   },
   "include": [
     "credentials/**/*",
     "nodes/**/*",
-    "shared/**/*"
+    "shared/**/*",
+    "test/**/*"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "**/*.test.ts"
+    "dist"
   ]
 }

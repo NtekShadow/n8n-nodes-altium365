@@ -1,6 +1,7 @@
 import pluginJs from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
+import globals from 'globals';
 
 export default [
 	{
@@ -15,6 +16,10 @@ export default [
 				ecmaVersion: 2022,
 				sourceType: 'module',
 				project: './tsconfig.json',
+			},
+			globals: {
+				...globals.node,
+				...globals.jest,
 			},
 		},
 		plugins: {
