@@ -1,4 +1,4 @@
-# n8n-nodes-altium365
+# @jonmash/n8n-nodes-altium365
 
 This is an n8n community node that integrates n8n with Altium 365 via the Nexar GraphQL API.
 
@@ -37,7 +37,7 @@ This is an n8n community node that integrates n8n with Altium 365 via the Nexar 
 
 1. Go to **Settings** > **Community Nodes**
 2. Select **Install**
-3. Enter `n8n-nodes-altium365` in **Enter npm package name**
+3. Enter `@jonmash/n8n-nodes-altium365` in **Enter npm package name**
 4. Agree to the risks of using community nodes
 5. Select **Install**
 
@@ -48,7 +48,7 @@ After installing the node, you can use it in your workflows.
 To install manually, navigate to your n8n installation directory and run:
 
 ```bash
-npm install n8n-nodes-altium365
+npm install @jonmash/n8n-nodes-altium365
 ```
 
 For Docker-based deployments, add this to your `package.json` or Dockerfile.
@@ -157,7 +157,7 @@ Returns paginated list of all projects in your workspace.
 ```bash
 # Clone the repository
 git clone https://github.com/jonmash/n8n-nodes-altium365.git
-cd n8n-nodes-altium365
+cd n8n-nodes-altium365  # Note: package is published as @jonmash/n8n-nodes-altium365
 
 # Install dependencies
 npm install
@@ -178,7 +178,7 @@ npm run format
 ### Project Structure
 
 ```
-n8n-nodes-altium365/
+@jonmash/n8n-nodes-altium365/
 ├── credentials/
 │   └── Altium365NexarApi.credentials.ts  # OAuth2 credentials
 ├── nodes/

@@ -6,7 +6,7 @@ This is an n8n community node package that integrates Altium 365 with n8n workfl
 
 **Current Version:** 0.1.0 (tagged in git as v0.1.0)
 
-**Package Name:** n8n-nodes-altium365
+**Package Name:** @jonmash/n8n-nodes-altium365
 
 **Repository:** https://github.com/jonmash/n8n-nodes-altium365
 
@@ -379,3 +379,4 @@ query GetProjectWithCommits($id: ID!) {
 **Last Updated:** 2025-03-16
 **Current Branch:** master
 **Current Tag:** v0.1.0
+- When starting a new feature, add the test cases first (Test Driven Development) and then work on the actual code.
