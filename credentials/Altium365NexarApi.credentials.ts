@@ -56,12 +56,7 @@ export class Altium365NexarApi implements ICredentialType {
 			headers: {
 				'Content-Type': 'application/x-www-form-urlencoded',
 			},
-			body: {
-				grant_type: 'client_credentials',
-				client_id: '={{$credentials.clientId}}',
-				client_secret: '={{$credentials.clientSecret}}',
-				scope: 'design.domain',
-			},
+			body: 'grant_type=client_credentials&client_id={{$credentials.clientId}}&client_secret={{$credentials.clientSecret}}&scope=design.domain',
 		},
 	};
 }
