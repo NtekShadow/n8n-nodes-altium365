@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.7] - 2026-03-27
+
+### Fixed
+- Re-added `offline_access` scope to enable refresh token functionality
+- Added `access_type=offline&prompt=consent` query parameters for refresh token request
+- Resolves "refreshToken is required" error when n8n tries to refresh expired tokens
+
 ## [0.2.6] - 2026-03-27
 
 ### Fixed
