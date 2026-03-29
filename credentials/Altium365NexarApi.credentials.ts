@@ -55,5 +55,17 @@ export class Altium365NexarApi implements ICredentialType {
 			type: 'hidden',
 			default: 'body',
 		},
+		{
+			displayName: 'Use PKCE',
+			name: 'usePKCE',
+			type: 'hidden',
+			default: true,
+		},
+		{
+			displayName: 'Code Challenge Method',
+			name: 'codeChallengeMethod',
+			type: 'hidden',
+			default: 'SHA256',
+		},
 	];
 }
