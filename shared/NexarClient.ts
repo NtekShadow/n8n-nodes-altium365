@@ -71,13 +71,7 @@ export class NexarClient {
 								const parts = token.split('.');
 								if (parts.length === 3) {
 									const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-									console.log('[Altium365] JWT claims:', JSON.stringify({
-										aud: payload.aud,
-										iss: payload.iss,
-										scope: payload.scope,
-										client_id: payload.client_id,
-										sub: payload.sub,
-									}, null, 2));
+									console.log('[Altium365] JWT full payload:', JSON.stringify(payload, null, 2));
 								}
 							} catch (jwtError) {
 								console.error('[Altium365] Could not decode JWT:', jwtError);
