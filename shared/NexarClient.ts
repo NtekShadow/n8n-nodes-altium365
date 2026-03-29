@@ -65,6 +65,23 @@ export class NexarClient {
 							console.log('[Altium365] Access token length:', token.length);
 							console.log('[Altium365] Access token start:', token.substring(0, 20) + '...');
 							console.log('[Altium365] Access token end:', '...' + token.substring(token.length - 20));
+
+							// Try to decode JWT to see claims (don't verify signature, just decode)
+							try {
+								const parts = token.split('.');
+								if (parts.length === 3) {
+									const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+									console.log('[Altium365] JWT claims:', JSON.stringify({
+										aud: payload.aud,
+										iss: payload.iss,
+										scope: payload.scope,
+										client_id: payload.client_id,
+										sub: payload.sub,
+									}, null, 2));
+								}
+							} catch (jwtError) {
+								console.error('[Altium365] Could not decode JWT:', jwtError);
+							}
 						}
 					}
 				} catch (credError) {
