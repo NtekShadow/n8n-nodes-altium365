@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-29
+
+### Fixed
+- Added missing `profile` and `email` scopes to OAuth2 request to match Nexar requirements
+- Scopes now match official Nexar example implementation
+- Should resolve missing audience claim in JWT tokens
+
+### Breaking Changes
+- Existing credentials will need to be recreated to use new scopes
+
 ## [0.2.12] - 2026-03-29
 
 ### Changed

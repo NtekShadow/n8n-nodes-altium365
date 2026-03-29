@@ -8,3 +8,4 @@ dist/
 coverage/
 .nyc_output/
 shared/generated/
+testing/
