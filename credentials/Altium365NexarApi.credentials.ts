@@ -23,7 +23,7 @@ export class Altium365NexarApi implements ICredentialType {
 			displayName: 'Grant Type',
 			name: 'grantType',
 			type: 'hidden',
-			default: 'authorizationCode',
+			default: 'pkce',
 		},
 		{
 			displayName: 'Authorization URL',
@@ -54,18 +54,6 @@ export class Altium365NexarApi implements ICredentialType {
 			name: 'authentication',
 			type: 'hidden',
 			default: 'body',
-		},
-		{
-			displayName: 'Use PKCE',
-			name: 'usePKCE',
-			type: 'hidden',
-			default: true,
-		},
-		{
-			displayName: 'Code Challenge Method',
-			name: 'codeChallengeMethod',
-			type: 'hidden',
-			default: 'SHA256',
 		},
 	];
 }
