@@ -55,6 +55,17 @@ export class NexarClient {
 						console.log('[Altium365] Token data keys:', Object.keys(tokenData));
 						console.log('[Altium365] Has access_token:', 'access_token' in tokenData);
 						console.log('[Altium365] Has refresh_token:', 'refresh_token' in tokenData);
+						console.log('[Altium365] Token type:', tokenData.token_type);
+						console.log('[Altium365] Granted scope:', tokenData.scope);
+						console.log('[Altium365] Expires in:', tokenData.expires_in);
+
+						// Show first/last 20 chars of access token to verify it exists
+						if (tokenData.access_token) {
+							const token = tokenData.access_token as string;
+							console.log('[Altium365] Access token length:', token.length);
+							console.log('[Altium365] Access token start:', token.substring(0, 20) + '...');
+							console.log('[Altium365] Access token end:', '...' + token.substring(token.length - 20));
+						}
 					}
 				} catch (credError) {
 					console.error('[Altium365] Error getting credentials:', credError);
