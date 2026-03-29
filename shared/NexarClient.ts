@@ -21,6 +21,9 @@ export class NexarClient {
 		this.context = context;
 		this.credentialType = credentialType;
 
+		console.log('[Altium365] NexarClient constructor called');
+		console.log('[Altium365] Credential type:', credentialType);
+
 		// Create a custom GraphQL client that uses n8n's OAuth2 request helper
 		this.graphqlClient = new GraphQLClient(NexarClient.GRAPHQL_ENDPOINT, {
 			headers: {
@@ -41,6 +44,21 @@ export class NexarClient {
 				console.log('[Altium365] Making GraphQL request to:', urlString);
 				console.log('[Altium365] Using credential type:', this.credentialType);
 				console.log('[Altium365] Request headers:', JSON.stringify(requestOptions.headers, null, 2));
+
+				// Try to get credential data to verify OAuth tokens are present
+				try {
+					const credentials = await this.context.getCredentials(this.credentialType);
+					console.log('[Altium365] Credential data keys:', Object.keys(credentials));
+					console.log('[Altium365] Has oauthTokenData:', 'oauthTokenData' in credentials);
+					if ('oauthTokenData' in credentials) {
+						const tokenData = credentials.oauthTokenData as any;
+						console.log('[Altium365] Token data keys:', Object.keys(tokenData));
+						console.log('[Altium365] Has access_token:', 'access_token' in tokenData);
+						console.log('[Altium365] Has refresh_token:', 'refresh_token' in tokenData);
+					}
+				} catch (credError) {
+					console.error('[Altium365] Error getting credentials:', credError);
+				}
 
 				try {
 					// Use requestOAuth2 for OAuth2 credentials instead of requestWithAuthentication
