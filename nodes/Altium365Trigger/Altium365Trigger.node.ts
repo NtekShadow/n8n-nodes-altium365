@@ -184,24 +184,56 @@ export class Altium365Trigger implements INodeType {
 				staticData.lastRevisions[projectId] = latestRevision.revisionId;
 			}
 		} else {
-			// Monitor all projects - single batched query instead of N+1
+			// Monitor all projects - paginate through all pages
 			console.log(
 				`[Altium365Trigger] Fetching all projects with revisions for ${workspaceUrl}`,
 			);
-			const result = await sdk.GetProjectsWithRevisions({
-				workspaceUrl,
-				first: 100,
-			});
 
-			if (!result.desProjects?.nodes) {
+			const allProjects: Array<{
+				id: string;
+				name?: string | null;
+				latestRevision?: {
+					revisionId: string;
+					message: string;
+					author: string;
+					createdAt: any;
+					files: Array<{ kind: any; path: string }>;
+				} | null;
+			}> = [];
+
+			let after: string | undefined;
+			let pageNum = 0;
+
+			do {
+				pageNum++;
+				const result = await sdk.GetProjectsWithRevisions({
+					workspaceUrl,
+					first: 100,
+					after,
+				});
+
+				if (!result.desProjects?.nodes) {
+					break;
+				}
+
+				allProjects.push(...result.desProjects.nodes);
+				console.log(
+					`[Altium365Trigger] Page ${pageNum}: got ${result.desProjects.nodes.length} projects (${allProjects.length}/${result.desProjects.totalCount} total)`,
+				);
+
+				if (result.desProjects.pageInfo.hasNextPage) {
+					after = result.desProjects.pageInfo.endCursor ?? undefined;
+				} else {
+					break;
+				}
+			} while (after);
+
+			if (allProjects.length === 0) {
 				console.log('[Altium365Trigger] No projects found');
 				return null;
 			}
 
-			const projects = result.desProjects.nodes;
-			console.log(
-				`[Altium365Trigger] Got ${projects.length} projects (total: ${result.desProjects.totalCount}) in single query`,
-			);
+			const projects = allProjects;
 
 			for (const project of projects) {
 				const latestRevision = project.latestRevision;
