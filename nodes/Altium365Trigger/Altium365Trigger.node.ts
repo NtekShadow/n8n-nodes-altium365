@@ -284,34 +284,45 @@ export class Altium365Trigger implements INodeType {
 			}
 
 			for (const project of allProjects) {
-				const latestRevision = project.latestRevision;
-				if (!latestRevision) {
+				if (isFirstRun) {
+					// Store baseline only
+					if (project.latestRevision) {
+						staticData.lastRevisions[project.id] = project.latestRevision.revisionId;
+					}
 					continue;
 				}
 
+				// Any project returned by the incremental query has been updated
+				const latestRevision = project.latestRevision;
 				const lastKnownRevision = staticData.lastRevisions[project.id];
+				const isNewCommit =
+					latestRevision && lastKnownRevision !== latestRevision.revisionId;
 
-				if (!isFirstRun && lastKnownRevision !== latestRevision.revisionId) {
-					console.log(
-						`[Altium365Trigger] CHANGE in "${project.name}": ${lastKnownRevision || '(new)'} -> ${latestRevision.revisionId}`,
-					);
-					const commitData: IDataObject = {
-						projectId: project.id,
-						projectName: project.name,
-						revisionId: latestRevision.revisionId,
-						message: latestRevision.message,
-						author: latestRevision.author,
-						committedAt: latestRevision.createdAt,
-					};
+				console.log(
+					`[Altium365Trigger] CHANGE in "${project.name}": type=${isNewCommit ? 'commit' : 'metadata'} rev=${lastKnownRevision || '(new)'} -> ${latestRevision?.revisionId || '(none)'}`,
+				);
+
+				const eventData: IDataObject = {
+					projectId: project.id,
+					projectName: project.name,
+					updatedAt: project.updatedAt,
+					changeType: isNewCommit ? 'commit' : 'metadata',
+				};
+
+				if (latestRevision) {
+					eventData.revisionId = latestRevision.revisionId;
+					eventData.message = latestRevision.message;
+					eventData.author = latestRevision.author;
+					eventData.committedAt = latestRevision.createdAt;
 
 					if (includeFileChanges) {
-						commitData.filesChanged = latestRevision.files;
+						eventData.filesChanged = latestRevision.files;
 					}
 
-					returnData.push({ json: commitData });
+					staticData.lastRevisions[project.id] = latestRevision.revisionId;
 				}
 
-				staticData.lastRevisions[project.id] = latestRevision.revisionId;
+				returnData.push({ json: eventData });
 			}
 
 			staticData.lastPollTime = pollStartTime;
