@@ -58,11 +58,26 @@ export class NexarClient {
 						);
 
 					const elapsed = Date.now() - startTime;
-					const bodyStr =
-						typeof responseBody === 'string'
-							? responseBody
-							: JSON.stringify(responseBody);
 
+					// Parse response and handle partial GraphQL errors gracefully.
+					// Nexar can return both `data` and `errors` (e.g., one broken project
+					// out of 100). graphql-request throws on any `errors` array, so we
+					// strip them and log instead.
+					let parsed =
+						typeof responseBody === 'string'
+							? JSON.parse(responseBody)
+							: responseBody;
+
+					if (parsed?.errors && parsed?.data) {
+						for (const err of parsed.errors) {
+							console.warn(
+								`[Altium365] Partial GraphQL error (non-fatal): ${err.message?.substring(0, 200)}`,
+							);
+						}
+						parsed = { data: parsed.data, extensions: parsed.extensions };
+					}
+
+					const bodyStr = JSON.stringify(parsed);
 					console.log(
 						`[Altium365] RESPONSE (${elapsed}ms) preview=${bodyStr.substring(0, 300)}`,
 					);
@@ -72,10 +87,7 @@ export class NexarClient {
 						status: 200,
 						statusText: 'OK',
 						text: async () => bodyStr,
-						json: async () =>
-							typeof responseBody === 'string'
-								? JSON.parse(responseBody)
-								: responseBody,
+						json: async () => parsed,
 						headers: new Headers({ 'content-type': 'application/json' }),
 					} as Response;
 				} catch (error) {
