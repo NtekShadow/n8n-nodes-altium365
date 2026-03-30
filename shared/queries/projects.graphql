@@ -136,6 +136,69 @@ query GetProjectsWithRevisions($workspaceUrl: String!, $first: Int, $after: Stri
   }
 }
 
+# Get library components with pagination (for trigger polling)
+query GetLibraryComponents($workspaceUrl: String!, $first: Int, $after: String) {
+  desLibrary(workspaceUrl: $workspaceUrl) {
+    components(first: $first, after: $after) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        id
+        name
+        description
+        comment
+        createdAt
+        modifiedAt
+        revisionId
+        isManaged
+        componentType {
+          name
+        }
+        createdBy {
+          userName
+          email
+        }
+      }
+    }
+  }
+}
+
+# Get a single component by ID
+query GetComponentById($id: ID!) {
+  desComponentById(id: $id) {
+    id
+    name
+    description
+    comment
+    createdAt
+    modifiedAt
+    revisionId
+    isManaged
+    componentType {
+      name
+    }
+    createdBy {
+      userName
+      email
+    }
+    details {
+      parameters {
+        name
+        value
+        type
+      }
+      itemParameters {
+        name
+        value
+        type
+      }
+    }
+  }
+}
+
 # Update project parameters
 mutation UpdateProjectParameters($projectId: ID!, $parameters: [DesProjectParameterInput!]!, $replaceExisting: Boolean) {
   desUpdateProjectParameters(

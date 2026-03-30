@@ -13,6 +13,8 @@ interface WorkflowStaticData {
 	lastRevisions?: Record<string, string>; // projectId -> revisionId
 	lastPollTime?: string; // ISO timestamp of last successful poll
 	lastProjectIds?: string[];
+	// Component tracking: componentId -> "modifiedAt|revisionId"
+	lastComponentState?: Record<string, string>;
 }
 
 export class Altium365Trigger implements INodeType {
@@ -51,6 +53,12 @@ export class Altium365Trigger implements INodeType {
 						name: 'New Project',
 						value: 'newProject',
 						description: 'Trigger when a new project is created',
+					},
+					{
+						name: 'Component Updated',
+						value: 'componentUpdated',
+						description:
+							'Trigger when a library component is created or modified',
 					},
 				],
 				default: 'projectCommitted',
@@ -129,10 +137,6 @@ export class Altium365Trigger implements INodeType {
 
 		const client = new NexarClient(this, 'altium365NexarApi', apiUrl);
 
-		console.log(
-			`[Altium365Trigger] revisionCount=${Object.keys(workflowStaticData.lastRevisions || {}).length} lastPollTime=${workflowStaticData.lastPollTime || '(none)'}`,
-		);
-
 		if (event === 'projectCommitted') {
 			return await Altium365Trigger.prototype.pollProjectCommitted.call(
 				this,
@@ -144,6 +148,15 @@ export class Altium365Trigger implements INodeType {
 
 		if (event === 'newProject') {
 			return await Altium365Trigger.prototype.pollNewProjects.call(
+				this,
+				client,
+				workspaceUrl,
+				workflowStaticData,
+			);
+		}
+
+		if (event === 'componentUpdated') {
+			return await Altium365Trigger.prototype.pollComponentUpdated.call(
 				this,
 				client,
 				workspaceUrl,
@@ -173,7 +186,6 @@ export class Altium365Trigger implements INodeType {
 		const returnData: INodeExecutionData[] = [];
 
 		if (projectId) {
-			// Monitor a specific project - single query
 			console.log(`[Altium365Trigger] Fetching single project: ${projectId}`);
 			const result = await sdk.GetLatestCommit({ projectId });
 
@@ -214,9 +226,6 @@ export class Altium365Trigger implements INodeType {
 				staticData.lastRevisions[projectId] = latestRevision.revisionId;
 			}
 		} else {
-			// Monitor all projects
-			// First run: full fetch to build baseline
-			// Subsequent runs: only fetch projects updated since last poll
 			const lastPollTime = staticData.lastPollTime;
 			const pollStartTime = new Date().toISOString();
 
@@ -276,7 +285,6 @@ export class Altium365Trigger implements INodeType {
 				}
 			} while (after);
 
-			// On first run with no results, that's fine - empty workspace
 			if (isFirstRun && allProjects.length === 0) {
 				console.log('[Altium365Trigger] No projects found in workspace');
 				staticData.lastPollTime = pollStartTime;
@@ -285,14 +293,12 @@ export class Altium365Trigger implements INodeType {
 
 			for (const project of allProjects) {
 				if (isFirstRun) {
-					// Store baseline only
 					if (project.latestRevision) {
 						staticData.lastRevisions[project.id] = project.latestRevision.revisionId;
 					}
 					continue;
 				}
 
-				// Any project returned by the incremental query has been updated
 				const latestRevision = project.latestRevision;
 				const lastKnownRevision = staticData.lastRevisions[project.id];
 				const isNewCommit =
@@ -353,7 +359,6 @@ export class Altium365Trigger implements INodeType {
 			console.log('[Altium365Trigger] First run for newProject - establishing baseline');
 		}
 
-		// Use createdAt filter on subsequent runs to only get new projects
 		const lastPollTime = staticData.lastPollTime;
 		const pollStartTime = new Date().toISOString();
 		const where =
@@ -381,7 +386,6 @@ export class Altium365Trigger implements INodeType {
 			}
 		}
 
-		// Update tracked project IDs with any new ones
 		for (const project of result.desProjects.nodes) {
 			if (!staticData.lastProjectIds.includes(project.id)) {
 				staticData.lastProjectIds.push(project.id);
@@ -392,6 +396,114 @@ export class Altium365Trigger implements INodeType {
 
 		console.log(
 			`[Altium365Trigger] newProject poll complete: ${returnData.length} new projects, ${staticData.lastProjectIds.length} tracked`,
+		);
+
+		if (returnData.length === 0) {
+			return null;
+		}
+
+		return [returnData];
+	}
+
+	private async pollComponentUpdated(
+		this: IPollFunctions,
+		client: NexarClient,
+		workspaceUrl: string,
+		staticData: WorkflowStaticData,
+	): Promise<INodeExecutionData[][] | null> {
+		const sdk = client.getSdk();
+
+		const isFirstRun = !staticData.lastComponentState;
+		if (!staticData.lastComponentState) {
+			staticData.lastComponentState = {};
+			console.log('[Altium365Trigger] First run for components - establishing baseline');
+		}
+
+		const pollStartTime = new Date().toISOString();
+
+		// No server-side modifiedAt filter available, so fetch all and compare
+		const allComponents: Array<{
+			id: string;
+			name: string;
+			description: string;
+			comment: string;
+			createdAt: string;
+			modifiedAt: string;
+			revisionId: string;
+			isManaged: boolean;
+			componentType?: { name: string } | null;
+			createdBy: { userName?: string | null; email?: string | null };
+		}> = [];
+
+		let after: string | undefined;
+		let pageNum = 0;
+
+		do {
+			pageNum++;
+			const result = await sdk.GetLibraryComponents({
+				workspaceUrl,
+				first: 100,
+				after,
+			});
+
+			const components = result.desLibrary?.components;
+			if (!components?.nodes) {
+				break;
+			}
+
+			allComponents.push(...components.nodes);
+			console.log(
+				`[Altium365Trigger] Components page ${pageNum}: got ${components.nodes.length} (${allComponents.length}/${components.totalCount} total)`,
+			);
+
+			if (components.pageInfo.hasNextPage) {
+				after = components.pageInfo.endCursor ?? undefined;
+			} else {
+				break;
+			}
+		} while (after);
+
+		console.log(
+			`[Altium365Trigger] Fetched ${allComponents.length} components total`,
+		);
+
+		const returnData: INodeExecutionData[] = [];
+
+		for (const component of allComponents) {
+			// Track state as "modifiedAt|revisionId" to detect any change
+			const currentState = `${component.modifiedAt}|${component.revisionId}`;
+			const lastState = staticData.lastComponentState[component.id];
+
+			if (!isFirstRun && lastState !== currentState) {
+				const isNew = !lastState;
+				console.log(
+					`[Altium365Trigger] Component ${isNew ? 'CREATED' : 'UPDATED'}: "${component.name}" (${component.id.substring(0, 40)}...)`,
+				);
+
+				returnData.push({
+					json: {
+						componentId: component.id,
+						componentName: component.name,
+						description: component.description,
+						comment: component.comment,
+						componentType: component.componentType?.name || null,
+						changeType: isNew ? 'created' : 'updated',
+						createdAt: component.createdAt,
+						modifiedAt: component.modifiedAt,
+						revisionId: component.revisionId,
+						isManaged: component.isManaged,
+						createdBy: component.createdBy,
+					},
+				});
+			}
+
+			staticData.lastComponentState[component.id] = currentState;
+		}
+
+		staticData.lastPollTime = pollStartTime;
+
+		console.log(
+			`[Altium365Trigger] Component poll complete: ${returnData.length} events, ${Object.keys(staticData.lastComponentState).length} components tracked`,
 		);
 
 		if (returnData.length === 0) {
