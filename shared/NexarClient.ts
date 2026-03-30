@@ -31,18 +31,23 @@ export class NexarClient {
 		this.graphqlClient = new GraphQLClient(this.apiUrl, {
 			fetch: async (url: string | URL | Request, options?: Record<string, any>) => {
 				const urlString = typeof url === 'string' ? url : url.toString();
+				const bodyPreview = options?.body
+					? String(options.body).substring(0, 200)
+					: '(no body)';
+				console.log(`[Altium365] REQUEST ${urlString} body=${bodyPreview}`);
 
 				const requestOptions: IHttpRequestOptions = {
 					method: 'POST',
 					url: urlString,
 					headers: {
 						'Content-Type': 'application/json',
-						'User-Agent': 'n8n-nodes-altium365/0.4.1',
+						'User-Agent': 'n8n-nodes-altium365/0.5.0',
 					},
 					body: options?.body as string,
 					json: false,
 				};
 
+				const startTime = Date.now();
 				try {
 					// n8n handles Bearer token injection and refresh automatically
 					const responseBody =
@@ -52,10 +57,15 @@ export class NexarClient {
 							requestOptions,
 						);
 
+					const elapsed = Date.now() - startTime;
 					const bodyStr =
 						typeof responseBody === 'string'
 							? responseBody
 							: JSON.stringify(responseBody);
+
+					console.log(
+						`[Altium365] RESPONSE (${elapsed}ms) preview=${bodyStr.substring(0, 300)}`,
+					);
 
 					return {
 						ok: true,
@@ -69,8 +79,11 @@ export class NexarClient {
 						headers: new Headers({ 'content-type': 'application/json' }),
 					} as Response;
 				} catch (error) {
+					const elapsed = Date.now() - startTime;
 					const errorMessage = error instanceof Error ? error.message : String(error);
-					console.error('[Altium365] Request failed:', errorMessage);
+					console.error(
+						`[Altium365] REQUEST FAILED (${elapsed}ms): ${errorMessage}`,
+					);
 					throw error;
 				}
 			},

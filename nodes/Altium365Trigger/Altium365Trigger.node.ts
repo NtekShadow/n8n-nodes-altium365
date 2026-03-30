@@ -88,13 +88,17 @@ export class Altium365Trigger implements INodeType {
 
 	async poll(this: IPollFunctions): Promise<INodeExecutionData[][] | null> {
 		const event = this.getNodeParameter('event') as string;
+		console.log(`[Altium365Trigger] poll() called, event=${event}`);
+
 		const credentials = await this.getCredentials('altium365NexarApi');
 		const workspaceUrl = credentials.workspaceUrl as string;
 		const apiUrl = credentials.apiEndpointUrl as string;
+		console.log(`[Altium365Trigger] workspaceUrl=${workspaceUrl} apiUrl=${apiUrl}`);
 
 		const client = new NexarClient(this, 'altium365NexarApi', apiUrl);
 
 		const workflowStaticData = this.getWorkflowStaticData('node') as WorkflowStaticData;
+		console.log(`[Altium365Trigger] staticData=${JSON.stringify(workflowStaticData)}`);
 
 		if (event === 'projectCommitted') {
 			return await Altium365Trigger.prototype.pollProjectCommitted.call(
@@ -125,17 +129,22 @@ export class Altium365Trigger implements INodeType {
 	): Promise<INodeExecutionData[][] | null> {
 		const projectId = this.getNodeParameter('projectId', '') as string;
 		const includeFileChanges = this.getNodeParameter('includeFileChanges', true) as boolean;
+		console.log(
+			`[Altium365Trigger] pollProjectCommitted: projectId=${projectId || '(all)'} includeFileChanges=${includeFileChanges}`,
+		);
 		const sdk = client.getSdk();
 
 		// Initialize storage for last known revision IDs
 		if (!staticData.lastRevisions) {
 			staticData.lastRevisions = {};
+			console.log('[Altium365Trigger] Initialized lastRevisions (first run)');
 		}
 
 		const returnData: INodeExecutionData[] = [];
 
 		if (projectId) {
 			// Monitor a specific project
+			console.log(`[Altium365Trigger] Fetching latest commit for project ${projectId}`);
 			const result = await sdk.GetLatestCommit({ projectId });
 
 			if (!result.desProjectById) {
@@ -144,12 +153,19 @@ export class Altium365Trigger implements INodeType {
 
 			const project = result.desProjectById;
 			const latestRevision = project.latestRevision;
+			console.log(
+				`[Altium365Trigger] Project "${project.name}" latestRevision=${latestRevision?.revisionId || 'null'}`,
+			);
 
 			if (latestRevision) {
 				const lastKnownRevision = staticData.lastRevisions[projectId];
+				console.log(
+					`[Altium365Trigger] Comparing: stored=${lastKnownRevision || '(none)'} current=${latestRevision.revisionId}`,
+				);
 
 				// If this is a new revision
 				if (lastKnownRevision && lastKnownRevision !== latestRevision.revisionId) {
+					console.log('[Altium365Trigger] NEW COMMIT DETECTED - firing event');
 					const commitData: IDataObject = {
 						projectId: project.id,
 						projectName: project.name,
@@ -173,28 +189,44 @@ export class Altium365Trigger implements INodeType {
 			}
 		} else {
 			// Monitor all projects in workspace
+			console.log(`[Altium365Trigger] Fetching all projects for workspace ${workspaceUrl}`);
 			const projectsResult = await sdk.GetProjects({
 				workspaceUrl,
-				first: 100, // TODO: handle pagination if workspace has >100 projects
+				first: 100,
 			});
 
 			if (!projectsResult.desProjects?.nodes) {
+				console.log('[Altium365Trigger] No projects found in workspace');
 				return null;
 			}
 
+			console.log(
+				`[Altium365Trigger] Found ${projectsResult.desProjects.nodes.length} projects`,
+			);
+
 			// Check each project for new commits
 			for (const project of projectsResult.desProjects.nodes) {
+				console.log(
+					`[Altium365Trigger] Checking project "${project.name}" (${project.id})`,
+				);
 				const projectResult = await sdk.GetLatestCommit({ projectId: project.id });
 
 				if (!projectResult.desProjectById?.latestRevision) {
+					console.log(`[Altium365Trigger] Project "${project.name}" has no revisions`);
 					continue;
 				}
 
 				const latestRevision = projectResult.desProjectById.latestRevision;
 				const lastKnownRevision = staticData.lastRevisions[project.id];
+				console.log(
+					`[Altium365Trigger] Project "${project.name}": stored=${lastKnownRevision || '(none)'} current=${latestRevision.revisionId}`,
+				);
 
 				// If this is a new revision
 				if (lastKnownRevision && lastKnownRevision !== latestRevision.revisionId) {
+					console.log(
+						`[Altium365Trigger] NEW COMMIT in "${project.name}" - firing event`,
+					);
 					const commitData: IDataObject = {
 						projectId: project.id,
 						projectName: project.name,
@@ -217,6 +249,10 @@ export class Altium365Trigger implements INodeType {
 				staticData.lastRevisions[project.id] = latestRevision.revisionId;
 			}
 		}
+
+		console.log(
+			`[Altium365Trigger] pollProjectCommitted complete: ${returnData.length} events found`,
+		);
 
 		if (returnData.length === 0) {
 			return null;
