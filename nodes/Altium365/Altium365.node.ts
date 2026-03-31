@@ -7,6 +7,25 @@ import type {
 import { NodeOperationError } from 'n8n-workflow';
 
 import { NexarClient } from '../../shared/NexarClient';
+import { log } from '../../shared/log';
+
+async function pollJob<T>(
+	pollFn: () => Promise<T>,
+	isComplete: (result: T) => boolean,
+	isError: (result: T) => boolean,
+	getErrorMessage: (result: T) => string,
+	pollIntervalMs: number,
+	timeoutMs: number,
+): Promise<T> {
+	const startTime = Date.now();
+	while (Date.now() - startTime < timeoutMs) {
+		const result = await pollFn();
+		if (isComplete(result)) return result;
+		if (isError(result)) throw new Error(getErrorMessage(result));
+		await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+	}
+	throw new Error(`Job timed out after ${timeoutMs / 1000} seconds`);
+}
 
 export class Altium365 implements INodeType {
 	description: INodeTypeDescription = {
@@ -36,6 +55,10 @@ export class Altium365 implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
+						name: 'Export',
+						value: 'export',
+					},
+					{
 						name: 'Project',
 						value: 'project',
 					},
@@ -47,7 +70,7 @@ export class Altium365 implements INodeType {
 				default: 'project',
 			},
 
-			// Project operations
+			// ==================== Project operations ====================
 			{
 				displayName: 'Operation',
 				name: 'operation',
@@ -93,7 +116,7 @@ export class Altium365 implements INodeType {
 				default: 'get',
 			},
 
-			// Workspace operations
+			// ==================== Workspace operations ====================
 			{
 				displayName: 'Operation',
 				name: 'operation',
@@ -115,7 +138,44 @@ export class Altium365 implements INodeType {
 				default: 'getAll',
 			},
 
-			// Project ID field (used by multiple operations)
+			// ==================== Export operations ====================
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['export'],
+					},
+				},
+				options: [
+					{
+						name: 'Download Release Package',
+						value: 'downloadReleasePackage',
+						description: 'Get download URLs for a release variant',
+						action: 'Download a release package',
+					},
+					{
+						name: 'Export Project Files',
+						value: 'exportProjectFiles',
+						description:
+							'Export project files (Gerber, GerberX2, IDF, NCDrill, or custom OutJob)',
+						action: 'Export project files',
+					},
+					{
+						name: 'Create Manufacture Package',
+						value: 'createManufacturePackage',
+						description: 'Create and download a manufacture package',
+						action: 'Create a manufacture package',
+					},
+				],
+				default: 'exportProjectFiles',
+			},
+
+			// ==================== Shared fields ====================
+
+			// Project ID (used by project + export operations)
 			{
 				displayName: 'Project ID',
 				name: 'projectId',
@@ -123,15 +183,22 @@ export class Altium365 implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
-						resource: ['project'],
-						operation: ['get', 'getLatestCommit', 'getCommitHistory', 'updateParameters'],
+						resource: ['project', 'export'],
+						operation: [
+							'get',
+							'getLatestCommit',
+							'getCommitHistory',
+							'updateParameters',
+							'exportProjectFiles',
+							'createManufacturePackage',
+						],
 					},
 				},
 				default: '',
-				description: 'The ID of the project',
+				description: 'The ID of the project (full grid format)',
 			},
 
-			// Limit field for getMany
+			// Limit field
 			{
 				displayName: 'Limit',
 				name: 'limit',
@@ -149,7 +216,7 @@ export class Altium365 implements INodeType {
 				description: 'Max number of results to return',
 			},
 
-			// Return all toggle for getMany
+			// Return all toggle
 			{
 				displayName: 'Return All',
 				name: 'returnAll',
@@ -162,6 +229,188 @@ export class Altium365 implements INodeType {
 				},
 				default: false,
 				description: 'Whether to return all results or only up to a given limit',
+			},
+
+			// ==================== Export: Download Release Package ====================
+
+			{
+				displayName: 'Release ID',
+				name: 'releaseId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['export'],
+						operation: ['downloadReleasePackage'],
+					},
+				},
+				default: '',
+				description: 'The ID of the release (full grid format)',
+			},
+
+			// ==================== Export: Export Project Files ====================
+
+			{
+				displayName: 'Export Type',
+				name: 'exportType',
+				type: 'options',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['export'],
+						operation: ['exportProjectFiles'],
+					},
+				},
+				options: [
+					{ name: 'Gerber', value: 'Gerber' },
+					{ name: 'Gerber X2', value: 'GerberX2' },
+					{ name: 'IDF', value: 'IDF' },
+					{ name: 'NC Drill', value: 'NCDrill' },
+					{ name: 'Custom OutJob', value: 'CustomOutJob' },
+				],
+				default: 'Gerber',
+				description: 'The type of project export to create',
+			},
+			{
+				displayName: 'OutJob Content',
+				name: 'outJobContent',
+				type: 'string',
+				typeOptions: {
+					rows: 10,
+				},
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['export'],
+						operation: ['exportProjectFiles'],
+						exportType: ['CustomOutJob'],
+					},
+				},
+				default: '',
+				description: 'The content of an Altium Designer OutJob file',
+			},
+
+			// ==================== Export: Create Manufacture Package ====================
+
+			{
+				displayName: 'Package Name',
+				name: 'packageName',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['export'],
+						operation: ['createManufacturePackage'],
+					},
+				},
+				default: '',
+				description: 'The name for the manufacture package',
+			},
+			{
+				displayName: 'Share With (Emails)',
+				name: 'shareWithEmails',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['export'],
+						operation: ['createManufacturePackage'],
+					},
+				},
+				default: '',
+				description: 'Comma-separated email addresses of manufacturers to share with',
+			},
+			{
+				displayName: 'Package Description',
+				name: 'packageDescription',
+				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['export'],
+						operation: ['createManufacturePackage'],
+					},
+				},
+				default: '',
+				description: 'Optional description for the package',
+			},
+
+			// ==================== Export: Shared optional fields ====================
+
+			{
+				displayName: 'Variant Name',
+				name: 'variantName',
+				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['export'],
+						operation: ['exportProjectFiles', 'createManufacturePackage'],
+					},
+				},
+				default: '',
+				description: 'Optional variant name. If empty, the default variant is used.',
+			},
+			{
+				displayName: 'Revision ID',
+				name: 'revisionId',
+				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['export'],
+						operation: ['exportProjectFiles', 'createManufacturePackage'],
+					},
+				},
+				default: '',
+				description:
+					'Optional Git commit/revision ID. If empty, the latest version is used.',
+			},
+			{
+				displayName: 'File Name',
+				name: 'exportFileName',
+				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['export'],
+						operation: ['exportProjectFiles'],
+					},
+				},
+				default: '',
+				description: 'Optional output file name (e.g. "MyExport.zip")',
+			},
+
+			// ==================== Export: Async job settings ====================
+
+			{
+				displayName: 'Timeout (Seconds)',
+				name: 'timeout',
+				type: 'number',
+				displayOptions: {
+					show: {
+						resource: ['export'],
+						operation: ['exportProjectFiles', 'createManufacturePackage'],
+					},
+				},
+				typeOptions: {
+					minValue: 30,
+				},
+				default: 300,
+				description: 'Maximum time to wait for the job to complete (default 5 minutes)',
+			},
+			{
+				displayName: 'Poll Interval (Seconds)',
+				name: 'pollInterval',
+				type: 'number',
+				displayOptions: {
+					show: {
+						resource: ['export'],
+						operation: ['exportProjectFiles', 'createManufacturePackage'],
+					},
+				},
+				typeOptions: {
+					minValue: 1,
+					maxValue: 30,
+				},
+				default: 5,
+				description: 'How often to check the job status',
 			},
 		],
 	};
@@ -177,12 +426,12 @@ export class Altium365 implements INodeType {
 		const apiUrl = credentials.apiEndpointUrl as string;
 
 		const client = new NexarClient(this, 'altium365NexarApi', apiUrl);
+		const sdk = client.getSdk();
 
 		for (let i = 0; i < items.length; i++) {
 			try {
 				if (resource === 'workspace') {
 					if (operation === 'getAll') {
-						const sdk = client.getSdk();
 						const result = await sdk.GetWorkspaceInfos();
 
 						if (!result.desWorkspaceInfos) {
@@ -199,8 +448,6 @@ export class Altium365 implements INodeType {
 				}
 
 				if (resource === 'project') {
-					const sdk = await client.getSdk();
-
 					if (operation === 'get') {
 						const projectId = this.getNodeParameter('projectId', i) as string;
 						const result = await sdk.GetProjectById({ id: projectId });
@@ -291,16 +538,253 @@ export class Altium365 implements INodeType {
 					}
 
 					if (operation === 'updateParameters') {
-						// TODO: Add parameter input fields and implement mutation
 						throw new NodeOperationError(
 							this.getNode(),
 							'Update Parameters operation not yet implemented',
 						);
 					}
 				}
+
+				if (resource === 'export') {
+					if (operation === 'downloadReleasePackage') {
+						const releaseId = this.getNodeParameter('releaseId', i) as string;
+
+						const result = await sdk.GetReleaseById({ id: releaseId });
+
+						if (!result.desReleaseById) {
+							throw new NodeOperationError(
+								this.getNode(),
+								`Release ${releaseId} not found`,
+							);
+						}
+
+						const release = result.desReleaseById;
+						returnData.push({
+							json: {
+								releaseId: release.releaseId,
+								description: release.description,
+								createdAt: release.createdAt,
+								variants: release.variants,
+							},
+							pairedItem: { item: i },
+						});
+					}
+
+					if (operation === 'exportProjectFiles') {
+						const projectId = this.getNodeParameter('projectId', i) as string;
+						const exportType = this.getNodeParameter('exportType', i) as string;
+						const variantName = this.getNodeParameter('variantName', i, '') as string;
+						const revisionId = this.getNodeParameter('revisionId', i, '') as string;
+						const fileName = this.getNodeParameter(
+							'exportFileName',
+							i,
+							'',
+						) as string;
+						const timeout = this.getNodeParameter('timeout', i, 300) as number;
+						const pollIntervalSec = this.getNodeParameter(
+							'pollInterval',
+							i,
+							5,
+						) as number;
+
+						const input: Record<string, unknown> = {
+							projectId,
+							variantName: variantName || undefined,
+							vcsRevisionId: revisionId || undefined,
+						};
+
+						const fileNameOpt = fileName ? { fileName } : {};
+
+						switch (exportType) {
+							case 'Gerber':
+								input.exportGerber = fileNameOpt;
+								break;
+							case 'GerberX2':
+								input.exportGerberX2 = fileNameOpt;
+								break;
+							case 'IDF':
+								input.exportIdf = fileNameOpt;
+								break;
+							case 'NCDrill':
+								input.exportNCDrill = fileNameOpt;
+								break;
+							case 'CustomOutJob': {
+								const outJobContent = this.getNodeParameter(
+									'outJobContent',
+									i,
+								) as string;
+								input.exportAny = {
+									outJobContent,
+									...(fileName ? { fileName } : {}),
+								};
+								break;
+							}
+						}
+
+						log('Altium365', `Creating export job: type=${exportType} project=${projectId}`);
+						const createResult = await sdk.CreateProjectExportJob({
+							input: input as any,
+						});
+
+						const errors = createResult.desCreateProjectExportJob.errors;
+						if (errors?.length > 0) {
+							throw new NodeOperationError(
+								this.getNode(),
+								`Export job creation failed: ${errors.map((e) => e.message).join(', ')}`,
+							);
+						}
+
+						const jobId =
+							createResult.desCreateProjectExportJob.projectExportJobId;
+						if (!jobId) {
+							throw new NodeOperationError(
+								this.getNode(),
+								'Export job creation returned no job ID',
+							);
+						}
+
+						log('Altium365', `Polling export job ${jobId}...`);
+						const jobResult = await pollJob(
+							() => sdk.GetProjectExportJob({ projectExportJobId: jobId }),
+							(r) => r.desProjectExportJob?.status === 'DONE',
+							(r) => r.desProjectExportJob?.status === 'ERROR',
+							(r) =>
+								`Export job failed: ${r.desProjectExportJob?.reason ?? 'Unknown error'}`,
+							pollIntervalSec * 1000,
+							timeout * 1000,
+						);
+
+						log(
+							'Altium365',
+							`Export job complete: ${jobResult.desProjectExportJob?.downloadUrl}`,
+						);
+						returnData.push({
+							json: {
+								projectId,
+								exportType,
+								status: 'DONE',
+								downloadUrl: jobResult.desProjectExportJob?.downloadUrl,
+							},
+							pairedItem: { item: i },
+						});
+					}
+
+					if (operation === 'createManufacturePackage') {
+						const projectId = this.getNodeParameter('projectId', i) as string;
+						const packageName = this.getNodeParameter('packageName', i) as string;
+						const shareWithRaw = this.getNodeParameter(
+							'shareWithEmails',
+							i,
+						) as string;
+						const shareWith = shareWithRaw
+							.split(',')
+							.map((e) => e.trim())
+							.filter(Boolean);
+						const description = this.getNodeParameter(
+							'packageDescription',
+							i,
+							'',
+						) as string;
+						const variantName = this.getNodeParameter(
+							'variantName',
+							i,
+							'',
+						) as string;
+						const revisionId = this.getNodeParameter(
+							'revisionId',
+							i,
+							'',
+						) as string;
+						const timeout = this.getNodeParameter('timeout', i, 300) as number;
+						const pollIntervalSec = this.getNodeParameter(
+							'pollInterval',
+							i,
+							5,
+						) as number;
+
+						log(
+							'Altium365',
+							`Creating manufacture package "${packageName}" for project ${projectId}`,
+						);
+						const createResult = await sdk.CreateManufacturePackage({
+							input: {
+								projectId,
+								name: packageName,
+								shareWith,
+								description: description || undefined,
+								variantName: variantName || undefined,
+								vcsRevisionId: revisionId || undefined,
+							},
+						});
+
+						const errors = createResult.desCreateManufacturePackage.errors;
+						if (errors?.length > 0) {
+							throw new NodeOperationError(
+								this.getNode(),
+								`Manufacture package creation failed: ${errors.map((e) => e.message).join(', ')}`,
+							);
+						}
+
+						const jobId = createResult.desCreateManufacturePackage.jobId;
+
+						log('Altium365', `Polling manufacture package job ${jobId}...`);
+						const jobResult = await pollJob(
+							() => sdk.GetManufacturePackageJob({ id: jobId }),
+							(r) =>
+								r.desManufacturePackageCreationJob?.status === 'DONE',
+							(r) =>
+								r.desManufacturePackageCreationJob?.status === 'ERROR',
+							(r) => {
+								const errs =
+									r.desManufacturePackageCreationJob?.payload?.errors;
+								return `Manufacture package failed: ${errs?.map((e) => e.message).join(', ') ?? 'Unknown error'}`;
+							},
+							pollIntervalSec * 1000,
+							timeout * 1000,
+						);
+
+						const packageId =
+							jobResult.desManufacturePackageCreationJob?.payload?.packageId;
+
+						if (!packageId) {
+							throw new NodeOperationError(
+								this.getNode(),
+								'Manufacture package created but returned no package ID',
+							);
+						}
+
+						// Look up the download URL via project releases
+						const pkgResult = await sdk.GetProjectManufacturePackages({
+							projectId,
+						});
+						const allPackages =
+							pkgResult.desProjectById?.design?.releases?.nodes?.flatMap(
+								(r) => r.manufacturePackages,
+							) ?? [];
+						const pkg = allPackages.find(
+							(p) => p.manufacturePackageId === packageId,
+						);
+
+						log(
+							'Altium365',
+							`Manufacture package complete: packageId=${packageId} downloadUrl=${pkg?.downloadUrl ?? '(not found)'}`,
+						);
+						returnData.push({
+							json: {
+								projectId,
+								packageName,
+								packageId,
+								status: 'DONE',
+								downloadUrl: pkg?.downloadUrl ?? null,
+							},
+							pairedItem: { item: i },
+						});
+					}
+				}
 			} catch (error) {
 				if (this.continueOnFail()) {
-					const errorMessage = error instanceof Error ? error.message : String(error);
+					const errorMessage =
+						error instanceof Error ? error.message : String(error);
 					returnData.push({
 						json: {
 							error: errorMessage,

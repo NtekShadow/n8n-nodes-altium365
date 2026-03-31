@@ -1,0 +1,75 @@
+# Get release variant download URL
+query GetReleaseById($id: ID!) {
+  desReleaseById(id: $id) {
+    id
+    releaseId
+    description
+    createdAt
+    variants {
+      name
+      releaseId
+      downloadUrl
+    }
+  }
+}
+
+# Create project export job (Gerber, GerberX2, IDF, NCDrill, or custom OutJob)
+mutation CreateProjectExportJob($input: DesCreateProjectExportJobInput!) {
+  desCreateProjectExportJob(input: $input) {
+    projectExportJobId
+    errors {
+      message
+    }
+  }
+}
+
+# Poll project export job status
+query GetProjectExportJob($projectExportJobId: String!) {
+  desProjectExportJob(projectExportJobId: $projectExportJobId) {
+    status
+    downloadUrl
+    reason
+  }
+}
+
+# Create manufacture package
+mutation CreateManufacturePackage($input: DesCreateManufacturePackageInput!) {
+  desCreateManufacturePackage(input: $input) {
+    jobId
+    errors {
+      message
+    }
+  }
+}
+
+# Poll manufacture package creation job
+query GetManufacturePackageJob($id: ID!) {
+  desManufacturePackageCreationJob(id: $id) {
+    id
+    status
+    createdAt
+    payload {
+      packageId
+      errors {
+        message
+      }
+    }
+  }
+}
+
+# Get manufacture packages for a project (to find downloadUrl after job completes)
+query GetProjectManufacturePackages($projectId: ID!) {
+  desProjectById(id: $projectId) {
+    design {
+      releases {
+        nodes {
+          manufacturePackages {
+            manufacturePackageId
+            name
+            downloadUrl
+          }
+        }
+      }
+    }
+  }
+}
