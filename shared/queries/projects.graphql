@@ -136,13 +136,6 @@ query GetProjectsWithRevisions($workspaceUrl: String!, $first: Int, $after: Stri
   }
 }
 
-# Quick check if library has been modified (cheap query before fetching all components)
-query GetLibraryUpdatedAt($workspaceUrl: String!) {
-  desLibrary(workspaceUrl: $workspaceUrl) {
-    updatedAt
-  }
-}
-
 # Get library components with pagination (for trigger polling)
 query GetLibraryComponents($workspaceUrl: String!, $first: Int, $after: String) {
   desLibrary(workspaceUrl: $workspaceUrl) {

@@ -15,7 +15,6 @@ interface WorkflowStaticData {
 	lastProjectIds?: string[];
 	// Component tracking: componentId -> "modifiedAt|revisionId"
 	lastComponentState?: Record<string, string>;
-	lastLibraryUpdatedAt?: string; // ISO timestamp of library's updatedAt
 }
 
 export class Altium365Trigger implements INodeType {
@@ -422,25 +421,7 @@ export class Altium365Trigger implements INodeType {
 
 		const pollStartTime = new Date().toISOString();
 
-		// Check library updatedAt first - skip full fetch if nothing changed
-		if (!isFirstRun && staticData.lastLibraryUpdatedAt) {
-			const libResult = await sdk.GetLibraryUpdatedAt({ workspaceUrl });
-			const currentLibUpdatedAt = libResult.desLibrary?.updatedAt;
-
-			if (currentLibUpdatedAt === staticData.lastLibraryUpdatedAt) {
-				console.log(
-					`[Altium365Trigger] Library unchanged (${currentLibUpdatedAt}) - skipping component fetch`,
-				);
-				staticData.lastPollTime = pollStartTime;
-				return null;
-			}
-
-			console.log(
-				`[Altium365Trigger] Library changed: ${staticData.lastLibraryUpdatedAt} -> ${currentLibUpdatedAt}`,
-			);
-		}
-
-		// Library changed (or first run) - fetch all components
+		// Fetch all components - no server-side date filter available
 		const allComponents: Array<{
 			id: string;
 			name: string;
@@ -485,10 +466,6 @@ export class Altium365Trigger implements INodeType {
 		console.log(
 			`[Altium365Trigger] Fetched ${allComponents.length} components total`,
 		);
-
-		// Store the library updatedAt for next poll's quick check
-		const libCheck = await sdk.GetLibraryUpdatedAt({ workspaceUrl });
-		staticData.lastLibraryUpdatedAt = libCheck.desLibrary?.updatedAt ?? undefined;
 
 		const returnData: INodeExecutionData[] = [];
 
