@@ -1,3 +1,19 @@
+# Get releases for a project (for dynamic dropdown)
+query GetProjectReleases($projectId: ID!) {
+  desProjectById(id: $projectId) {
+    design {
+      releases {
+        nodes {
+          id
+          releaseId
+          description
+          createdAt
+        }
+      }
+    }
+  }
+}
+
 # Get release variant download URL
 query GetReleaseById($id: ID!) {
   desReleaseById(id: $id) {

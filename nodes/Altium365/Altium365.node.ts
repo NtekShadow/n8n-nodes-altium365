@@ -1,6 +1,8 @@
 import type {
 	IExecuteFunctions,
+	ILoadOptionsFunctions,
 	INodeExecutionData,
+	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
@@ -177,9 +179,12 @@ export class Altium365 implements INodeType {
 
 			// Project ID (used by project + export operations)
 			{
-				displayName: 'Project ID',
+				displayName: 'Project Name or ID',
 				name: 'projectId',
-				type: 'string',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getProjects',
+				},
 				required: true,
 				displayOptions: {
 					show: {
@@ -195,7 +200,8 @@ export class Altium365 implements INodeType {
 					},
 				},
 				default: '',
-				description: 'The ID of the project (full grid format)',
+				description:
+					'Select a project or enter the full grid ID. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 			},
 
 			// Limit field
@@ -234,9 +240,13 @@ export class Altium365 implements INodeType {
 			// ==================== Export: Download Release Package ====================
 
 			{
-				displayName: 'Release ID',
+				displayName: 'Release Name or ID',
 				name: 'releaseId',
-				type: 'string',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getReleases',
+					loadOptionsDependsOn: ['projectId'],
+				},
 				required: true,
 				displayOptions: {
 					show: {
@@ -245,7 +255,8 @@ export class Altium365 implements INodeType {
 					},
 				},
 				default: '',
-				description: 'The ID of the release (full grid format)',
+				description:
+					'Select a release or enter the full grid ID. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 			},
 
 			// ==================== Export: Export Project Files ====================
@@ -413,6 +424,69 @@ export class Altium365 implements INodeType {
 				description: 'How often to check the job status',
 			},
 		],
+	};
+
+	methods = {
+		loadOptions: {
+			async getProjects(
+				this: ILoadOptionsFunctions,
+			): Promise<INodePropertyOptions[]> {
+				const credentials = await this.getCredentials('altium365NexarApi');
+				const apiUrl = credentials.apiEndpointUrl as string;
+				const workspaceUrl = credentials.workspaceUrl as string;
+				const client = new NexarClient(this, 'altium365NexarApi', apiUrl);
+				const sdk = client.getSdk();
+
+				const options: INodePropertyOptions[] = [];
+				let after: string | undefined;
+
+				do {
+					const result = await sdk.GetProjects({
+						workspaceUrl,
+						first: 100,
+						after,
+					});
+
+					if (!result.desProjects?.nodes) break;
+
+					for (const project of result.desProjects.nodes) {
+						options.push({
+							name: project.name || project.id,
+							value: project.id,
+						});
+					}
+
+					if (result.desProjects.pageInfo.hasNextPage) {
+						after = result.desProjects.pageInfo.endCursor ?? undefined;
+					} else {
+						break;
+					}
+				} while (after);
+
+				options.sort((a, b) => a.name.localeCompare(b.name));
+				return options;
+			},
+
+			async getReleases(
+				this: ILoadOptionsFunctions,
+			): Promise<INodePropertyOptions[]> {
+				const credentials = await this.getCredentials('altium365NexarApi');
+				const apiUrl = credentials.apiEndpointUrl as string;
+				const projectId = this.getCurrentNodeParameter('projectId') as string;
+
+				if (!projectId) return [];
+
+				const client = new NexarClient(this, 'altium365NexarApi', apiUrl);
+				const sdk = client.getSdk();
+				const result = await sdk.GetProjectReleases({ projectId });
+
+				const releases = result.desProjectById?.design?.releases?.nodes ?? [];
+				return releases.map((r) => ({
+					name: `${r.releaseId} - ${r.description || '(no description)'}`,
+					value: r.id,
+				}));
+			},
+		},
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {

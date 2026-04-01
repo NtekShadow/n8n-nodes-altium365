@@ -1,9 +1,14 @@
-import type { IExecuteFunctions, IPollFunctions, IHttpRequestOptions } from 'n8n-workflow';
+import type {
+	IExecuteFunctions,
+	IPollFunctions,
+	ILoadOptionsFunctions,
+	IHttpRequestOptions,
+} from 'n8n-workflow';
 import { GraphQLClient } from 'graphql-request';
 import { getSdk } from './generated/graphql';
 import { log, warn, error as logError } from './log';
 
-type ExecutionContext = IExecuteFunctions | IPollFunctions;
+type ExecutionContext = IExecuteFunctions | IPollFunctions | ILoadOptionsFunctions;
 
 export class NexarClient {
 	private graphqlClient: GraphQLClient;

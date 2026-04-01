@@ -1,7 +1,9 @@
 import type {
 	IDataObject,
+	ILoadOptionsFunctions,
 	IPollFunctions,
 	INodeExecutionData,
+	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
@@ -68,9 +70,12 @@ export class Altium365Trigger implements INodeType {
 
 			// Project ID filter for projectCommitted event
 			{
-				displayName: 'Project ID',
+				displayName: 'Project Name or ID',
 				name: 'projectId',
-				type: 'string',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getProjects',
+				},
 				displayOptions: {
 					show: {
 						event: ['projectCommitted'],
@@ -78,7 +83,7 @@ export class Altium365Trigger implements INodeType {
 				},
 				default: '',
 				description:
-					'Full project ID (grid:workspace:...:design:project/...) to monitor. Leave empty to monitor all projects.',
+					'Select a specific project to monitor, or leave empty to monitor all. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 			},
 
 			// Include file changes option
@@ -113,6 +118,34 @@ export class Altium365Trigger implements INodeType {
 					'Minimum time between API polls. Set n8n Poll Times to "Every Minute" and this controls the actual interval.',
 			},
 		],
+	};
+
+	methods = {
+		loadOptions: {
+			async getProjects(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const credentials = await this.getCredentials('altium365NexarApi');
+				const apiUrl = credentials.apiEndpointUrl as string;
+				const workspaceUrl = credentials.workspaceUrl as string;
+				const client = new NexarClient(this, 'altium365NexarApi', apiUrl);
+				const sdk = client.getSdk();
+				const options: INodePropertyOptions[] = [];
+				let after: string | undefined;
+				do {
+					const result = await sdk.GetProjects({ workspaceUrl, first: 100, after });
+					if (!result.desProjects?.nodes) break;
+					for (const project of result.desProjects.nodes) {
+						options.push({ name: project.name || project.id, value: project.id });
+					}
+					if (result.desProjects.pageInfo.hasNextPage) {
+						after = result.desProjects.pageInfo.endCursor ?? undefined;
+					} else {
+						break;
+					}
+				} while (after);
+				options.sort((a, b) => a.name.localeCompare(b.name));
+				return options;
+			},
+		},
 	};
 
 	async poll(this: IPollFunctions): Promise<INodeExecutionData[][] | null> {
