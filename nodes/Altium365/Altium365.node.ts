@@ -348,22 +348,13 @@ export class Altium365 implements INodeType {
 			// ==================== Export: Shared optional fields ====================
 
 			{
-				displayName: 'Variant Name',
+				displayName: 'Variant Name or ID',
 				name: 'variantName',
-				type: 'string',
-				displayOptions: {
-					show: {
-						resource: ['export'],
-						operation: ['exportProjectFiles', 'createManufacturePackage'],
-					},
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getVariants',
+					loadOptionsDependsOn: ['projectId'],
 				},
-				default: '',
-				description: 'Optional variant name. If empty, the default variant is used.',
-			},
-			{
-				displayName: 'Revision ID',
-				name: 'revisionId',
-				type: 'string',
 				displayOptions: {
 					show: {
 						resource: ['export'],
@@ -372,7 +363,25 @@ export class Altium365 implements INodeType {
 				},
 				default: '',
 				description:
-					'Optional Git commit/revision ID. If empty, the latest version is used.',
+					'Select a design variant, or leave empty for the default. Choose from the list, or specify a name using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+			},
+			{
+				displayName: 'Revision',
+				name: 'revisionId',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getRevisions',
+					loadOptionsDependsOn: ['projectId'],
+				},
+				displayOptions: {
+					show: {
+						resource: ['export'],
+						operation: ['exportProjectFiles', 'createManufacturePackage'],
+					},
+				},
+				default: '',
+				description:
+					'Select a specific commit, or leave empty for the latest. Choose from the list, or specify a revision ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 			},
 			{
 				displayName: 'File Name',
@@ -485,6 +494,48 @@ export class Altium365 implements INodeType {
 					name: `${r.releaseId} - ${r.description || '(no description)'}`,
 					value: r.id,
 				}));
+			},
+
+			async getVariants(
+				this: ILoadOptionsFunctions,
+			): Promise<INodePropertyOptions[]> {
+				const credentials = await this.getCredentials('altium365NexarApi');
+				const apiUrl = credentials.apiEndpointUrl as string;
+				const projectId = this.getCurrentNodeParameter('projectId') as string;
+
+				if (!projectId) return [];
+
+				const client = new NexarClient(this, 'altium365NexarApi', apiUrl);
+				const sdk = client.getSdk();
+				const result = await sdk.GetProjectVariants({ projectId });
+
+				const variants = result.desProjectById?.design?.variants ?? [];
+				return variants.map((v) => ({ name: v.name, value: v.name }));
+			},
+
+			async getRevisions(
+				this: ILoadOptionsFunctions,
+			): Promise<INodePropertyOptions[]> {
+				const credentials = await this.getCredentials('altium365NexarApi');
+				const apiUrl = credentials.apiEndpointUrl as string;
+				const projectId = this.getCurrentNodeParameter('projectId') as string;
+
+				if (!projectId) return [];
+
+				const client = new NexarClient(this, 'altium365NexarApi', apiUrl);
+				const sdk = client.getSdk();
+				const result = await sdk.GetCommitHistory({ projectId, first: 50 });
+
+				const commits = result.desProjectById?.revisions?.nodes ?? [];
+				return commits.map((c) => {
+					const shortHash = c.revisionId.substring(0, 7);
+					const date = new Date(c.createdAt).toLocaleDateString();
+					const msg = c.message.length > 60 ? c.message.substring(0, 57) + '...' : c.message;
+					return {
+						name: `${shortHash} - ${msg} (${date})`,
+						value: c.revisionId,
+					};
+				});
 			},
 		},
 	};

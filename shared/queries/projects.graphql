@@ -199,6 +199,17 @@ query GetComponentById($id: ID!) {
   }
 }
 
+# Get design variants for a project (for dynamic dropdown)
+query GetProjectVariants($projectId: ID!) {
+  desProjectById(id: $projectId) {
+    design {
+      variants {
+        name
+      }
+    }
+  }
+}
+
 # Update project parameters
 mutation UpdateProjectParameters($projectId: ID!, $parameters: [DesProjectParameterInput!]!, $replaceExisting: Boolean) {
   desUpdateProjectParameters(
