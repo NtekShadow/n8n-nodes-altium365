@@ -344,6 +344,20 @@ export class Altium365 implements INodeType {
 				default: '',
 				description: 'Optional description for the package',
 			},
+			{
+				displayName: 'Callback URL',
+				name: 'callbackUrl',
+				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['export'],
+						operation: ['createManufacturePackage'],
+					},
+				},
+				default: '',
+				description:
+					'Optional webhook URL. When provided, Nexar will POST the result here when the package is ready and the node returns immediately with the job ID instead of waiting. Use an n8n Webhook Trigger node URL to continue the workflow asynchronously.',
+			},
 
 			// ==================== Export: Shared optional fields ====================
 
@@ -820,6 +834,11 @@ export class Altium365 implements INodeType {
 							i,
 							'',
 						) as string;
+						const callbackUrl = this.getNodeParameter(
+							'callbackUrl',
+							i,
+							'',
+						) as string;
 						const timeout = this.getNodeParameter('timeout', i, 300) as number;
 						const pollIntervalSec = this.getNodeParameter(
 							'pollInterval',
@@ -829,7 +848,7 @@ export class Altium365 implements INodeType {
 
 						log(
 							'Altium365',
-							`Creating manufacture package "${packageName}" for project ${projectId}`,
+							`Creating manufacture package "${packageName}" for project ${projectId}${callbackUrl ? ' (async/webhook mode)' : ''}`,
 						);
 						const createResult = await sdk.CreateManufacturePackage({
 							input: {
@@ -839,6 +858,7 @@ export class Altium365 implements INodeType {
 								description: description || undefined,
 								variantName: variantName || undefined,
 								vcsRevisionId: revisionId || undefined,
+								callbackUrl: callbackUrl || undefined,
 							},
 						});
 
@@ -851,6 +871,17 @@ export class Altium365 implements INodeType {
 						}
 
 						const jobId = createResult.desCreateManufacturePackage.jobId;
+
+						// If a callback URL was provided, return immediately - Nexar will POST
+						// to the webhook when the package is ready.
+						if (callbackUrl) {
+							log('Altium365', `Manufacture package job ${jobId} started, callback registered`);
+							returnData.push({
+								json: { projectId, packageName, jobId, status: 'PENDING', callbackUrl },
+								pairedItem: { item: i },
+							});
+							continue;
+						}
 
 						log('Altium365', `Polling manufacture package job ${jobId}...`);
 						const jobResult = await pollJob(

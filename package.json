@@ -1,6 +1,6 @@
 {
   "name": "@jonmash/n8n-nodes-altium365",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "n8n community node for Altium 365 via Nexar API",
   "keywords": [
     "n8n-community-node-package",
