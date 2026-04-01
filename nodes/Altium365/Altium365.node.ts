@@ -252,6 +252,61 @@ export class Altium365 implements INodeType {
 				description: 'Whether to return all results or only up to a given limit',
 			},
 
+			// ==================== Project: Update Parameters ====================
+
+			{
+				displayName: 'Parameters',
+				name: 'parameters',
+				type: 'fixedCollection',
+				typeOptions: {
+					multipleValues: true,
+				},
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['updateParameters'],
+					},
+				},
+				default: {},
+				description: 'The parameters to set on the project',
+				options: [
+					{
+						name: 'parameter',
+						displayName: 'Parameter',
+						values: [
+							{
+								displayName: 'Name',
+								name: 'name',
+								type: 'string',
+								default: '',
+								description: 'Parameter name',
+							},
+							{
+								displayName: 'Value',
+								name: 'value',
+								type: 'string',
+								default: '',
+								description: 'Parameter value',
+							},
+						],
+					},
+				],
+			},
+			{
+				displayName: 'Replace Existing',
+				name: 'replaceExisting',
+				type: 'boolean',
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['updateParameters'],
+					},
+				},
+				default: false,
+				description:
+					'Whether to replace all existing parameters. When off, parameters are appended or updated by name.',
+			},
+
 			// ==================== Export: Download Release Package ====================
 
 			{
@@ -697,10 +752,38 @@ export class Altium365 implements INodeType {
 					}
 
 					if (operation === 'updateParameters') {
-						throw new NodeOperationError(
-							this.getNode(),
-							'Update Parameters operation not yet implemented',
-						);
+						const projectId = this.getNodeParameter('projectId', i, '', { extractValue: true }) as string;
+						const parametersData = this.getNodeParameter('parameters', i) as {
+							parameter?: Array<{ name: string; value: string }>;
+						};
+						const replaceExisting = this.getNodeParameter('replaceExisting', i, false) as boolean;
+						const parameters = parametersData.parameter ?? [];
+
+						if (parameters.length === 0) {
+							throw new NodeOperationError(this.getNode(), 'At least one parameter is required');
+						}
+
+						const result = await sdk.UpdateProjectParameters({
+							projectId,
+							parameters,
+							replaceExisting,
+						});
+
+						if (result.desUpdateProjectParameters.errors?.length > 0) {
+							throw new NodeOperationError(
+								this.getNode(),
+								`Failed to update parameters: ${result.desUpdateProjectParameters.errors.map((e) => e.message).join(', ')}`,
+							);
+						}
+
+						returnData.push({
+							json: {
+								projectId: result.desUpdateProjectParameters.projectId,
+								parametersUpdated: parameters.length,
+								replaceExisting,
+							},
+							pairedItem: { item: i },
+						});
 					}
 				}
 
