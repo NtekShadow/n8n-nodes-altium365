@@ -57,6 +57,8 @@ export class Altium365 implements INodeType {
 				name: 'resource',
 				type: 'options',
 				noDataExpression: true,
+				required: true,
+				description: 'Wähle die Ressource aus: "project" für Projektverwaltung (Abrufen, Aktualisieren, Commits), "export" für Export-Operationen (Gerber, NCDrill, etc.), "workspace" für Workspace-Informationen',
 				options: [
 					{
 						name: 'Export',
@@ -73,113 +75,59 @@ export class Altium365 implements INodeType {
 				],
 				default: 'project',
 			},
-
-			// ==================== Projekt-Operationen ====================
 			{
 				displayName: 'Operation',
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
-				displayOptions: {
-					show: {
-						resource: ['project'],
-					},
-				},
+				required: true,
+				description: 'Wähle die Operation aus: Für "project" - "get" (Details abrufen), "getSimplified" (vereinfachte Infos), "getMany" (Liste), "getLatestCommit", "getCommitHistory", "updateParameters"; Für "export" - "downloadReleasePackage", "exportProjectFiles", "createManufacturePackage"; Für "workspace" - "getAll"',
 				options: [
+					// Project operations
 					{
 						name: 'Projekt abrufen',
 						value: 'get',
-						description: 'Ruft Details eines spezifischen Projekts anhand der ID ab',
-						action: 'Projekt-Details abrufen',
 					},
 					{
 						name: 'Projekt abrufen (vereinfacht)',
 						value: 'getSimplified',
-						description: 'Ruft grundlegende Projektinformationen ab (ID, Name, Beschreibung, Status)',
-						action: 'Vereinfachte Projekt-Details abrufen',
 					},
 					{
-						name: 'Projekte auflisten',
+						name: 'Projekte abrufen (mehrere)',
 						value: 'getMany',
-						description: 'Ruft eine Liste von Projekten ab, optional mit Limit',
-						action: 'Mehrere Projekte abrufen',
 					},
 					{
-						name: 'Letzten Commit abrufen',
+						name: 'Neuesten Commit abrufen',
 						value: 'getLatestCommit',
-						description: 'Ruft den neuesten Commit eines Projekts ab',
-						action: 'Neuesten Commit abrufen',
 					},
 					{
 						name: 'Commit-Verlauf abrufen',
 						value: 'getCommitHistory',
-						description: 'Ruft den Commit-Verlauf eines Projekts ab',
-						action: 'Commit-Verlauf abrufen',
 					},
 					{
 						name: 'Parameter aktualisieren',
 						value: 'updateParameters',
-						description: 'Aktualisiert die Parameter eines Projekts',
-						action: 'Projekt-Parameter aktualisieren',
 					},
-				],
-				default: 'get',
-			},
-
-			// ==================== Workspace-Operationen ====================
-			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				displayOptions: {
-					show: {
-						resource: ['workspace'],
-					},
-				},
-				options: [
-					{
-						name: 'Alle abrufen',
-						value: 'getAll',
-						description: 'Ruft alle verfügbaren Workspaces ab',
-						action: 'Alle Workspaces abrufen',
-					},
-				],
-				default: 'getAll',
-			},
-
-			// ==================== Export-Operationen ====================
-			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				displayOptions: {
-					show: {
-						resource: ['export'],
-					},
-				},
-				options: [
+					// Export operations
 					{
 						name: 'Release-Paket herunterladen',
 						value: 'downloadReleasePackage',
-						description: 'Lädt Download-URLs für eine Release-Variante herunter',
-						action: 'Release-Paket herunterladen',
 					},
 					{
 						name: 'Projektdateien exportieren',
 						value: 'exportProjectFiles',
-						description: 'Exportiert Projektdateien (Gerber, GerberX2, IDF, NCDrill oder benutzerdefiniertes OutJob)',
-						action: 'Projektdateien exportieren',
 					},
 					{
 						name: 'Fertigungspaket erstellen',
 						value: 'createManufacturePackage',
-						description: 'Erstellt und lädt ein Fertigungspaket herunter',
-						action: 'Fertigungspaket erstellen',
+					},
+					// Workspace operations
+					{
+						name: 'Alle Workspaces abrufen',
+						value: 'getAll',
 					},
 				],
-				default: 'exportProjectFiles',
+				default: 'get',
 			},
 
 			// ==================== Shared fields ====================
