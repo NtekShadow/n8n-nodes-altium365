@@ -58,7 +58,7 @@ export class Altium365 implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				required: true,
-				description: 'Wähle die Ressource aus: "project" für Projektverwaltung (Abrufen, Aktualisieren, Commits), "export" für Export-Operationen (Gerber, NCDrill, etc.), "workspace" für Workspace-Informationen',
+				description: 'The resource to operate on. Send "project" for project management operations (get details, commits, updates), "export" for export operations (Gerber, NCDrill, packages), "workspace" for workspace information.',
 				options: [
 					{
 						name: 'Export',
@@ -81,7 +81,7 @@ export class Altium365 implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				required: true,
-				description: 'Wähle die Operation aus: Für "project" - "get" (Details abrufen), "getSimplified" (vereinfachte Infos), "getMany" (Liste), "getLatestCommit", "getCommitHistory", "updateParameters"; Für "export" - "downloadReleasePackage", "exportProjectFiles", "createManufacturePackage"; Für "workspace" - "getAll"',
+				description: 'The operation to perform. For resource "project": send "get" to retrieve full project details, "getSimplified" for basic info (ID, name, description, status), "getMany" for paginated list, "getLatestCommit" for latest commit, "getCommitHistory" for commit history, "updateParameters" to update project parameters. For "export": "downloadReleasePackage" for release downloads, "exportProjectFiles" for Gerber/NCDrill exports, "createManufacturePackage" for manufacture packages. For "workspace": "getAll" to get all workspaces.',
 				options: [
 					// Project operations
 					{
@@ -134,44 +134,11 @@ export class Altium365 implements INodeType {
 
 			// Projekt-ID (verwendet von Projekt- und Export-Operationen)
 			{
-				displayName: 'Projekt',
+				displayName: 'Projekt-ID',
 				name: 'projectId',
-				type: 'resourceLocator',
-				default: { mode: 'list', value: '' },
-				required: true,
-				displayOptions: {
-					show: {
-						resource: ['project', 'export'],
-						operation: [
-							'get',
-							'getSimplified',
-							'getLatestCommit',
-							'getCommitHistory',
-							'updateParameters',
-							'exportProjectFiles',
-							'createManufacturePackage',
-						],
-					},
-				},
-				description: 'Wählen Sie ein Projekt aus der Liste oder geben Sie die vollständige Grid-ID ein.',
-				modes: [
-					{
-						displayName: 'Aus Liste',
-						name: 'list',
-						type: 'list',
-						placeholder: 'Projekt auswählen...',
-						typeOptions: {
-							searchListMethod: 'searchProjects',
-							searchable: true,
-						},
-					},
-					{
-						displayName: 'Nach ID',
-						name: 'id',
-						type: 'string',
-						placeholder: 'grid:workspace:...:design:project/...',
-					},
-				],
+				type: 'string',
+				default: '',
+				description: 'The exact project ID as a string (e.g., "grid:workspace:...:design:project/..."). Required for project and export operations.',
 			},
 
 			// Limit-Feld
@@ -179,17 +146,11 @@ export class Altium365 implements INodeType {
 				displayName: 'Limit',
 				name: 'limit',
 				type: 'number',
-				displayOptions: {
-					show: {
-						resource: ['project'],
-						operation: ['getMany', 'getCommitHistory'],
-					},
-				},
 				typeOptions: {
 					minValue: 1,
 				},
 				default: 50,
-				description: 'Maximale Anzahl der zurückzugebenden Ergebnisse',
+				description: 'Maximum number of results to return. Used for getMany and getCommitHistory operations.',
 			},
 
 			// Alle zurückgeben Toggle
@@ -197,14 +158,8 @@ export class Altium365 implements INodeType {
 				displayName: 'Alle zurückgeben',
 				name: 'returnAll',
 				type: 'boolean',
-				displayOptions: {
-					show: {
-						resource: ['project'],
-						operation: ['getMany', 'getCommitHistory'],
-					},
-				},
 				default: false,
-				description: 'Gibt an, ob alle Ergebnisse oder nur bis zu einem bestimmten Limit zurückgegeben werden sollen',
+				description: 'Whether to return all results or limit to a specific number. Used for getMany and getCommitHistory operations.',
 			},
 
 			// ==================== Projekt: Parameter aktualisieren ====================
@@ -216,14 +171,8 @@ export class Altium365 implements INodeType {
 				typeOptions: {
 					multipleValues: true,
 				},
-				displayOptions: {
-					show: {
-						resource: ['project'],
-						operation: ['updateParameters'],
-					},
-				},
 				default: {},
-				description: 'Die Parameter, die für das Projekt gesetzt werden sollen',
+				description: 'The parameters to set for the project. Used for updateParameters operation.',
 				options: [
 					{
 						name: 'parameter',
@@ -253,37 +202,18 @@ export class Altium365 implements INodeType {
 				displayName: 'Vorhandene ersetzen',
 				name: 'replaceExisting',
 				type: 'boolean',
-				displayOptions: {
-					show: {
-						resource: ['project'],
-						operation: ['updateParameters'],
-					},
-				},
 				default: false,
-				description:
-					'Gibt an, ob alle vorhandenen Parameter ersetzt werden sollen. Wenn deaktiviert, werden Parameter nach Name angehängt oder aktualisiert.',
+				description: 'Whether to replace all existing parameters. If disabled, parameters are appended or updated by name. Used for updateParameters operation.',
 			},
 
 			// ==================== Export: Release-Paket herunterladen ====================
 
 			{
-				displayName: 'Release-Name oder ID',
+				displayName: 'Release-ID',
 				name: 'releaseId',
-				type: 'options',
-				typeOptions: {
-					loadOptionsMethod: 'getReleases',
-					loadOptionsDependsOn: ['projectId'],
-				},
-				required: true,
-				displayOptions: {
-					show: {
-						resource: ['export'],
-						operation: ['downloadReleasePackage'],
-					},
-				},
+				type: 'string',
 				default: '',
-				description:
-					'Wählen Sie eine Release aus der Liste oder geben Sie die vollständige Grid-ID ein. Wählen Sie aus der Liste oder geben Sie eine ID mit einem <a href="https://docs.n8n.io/code/expressions/">Ausdruck</a> an.',
+				description: 'The exact release ID as a string. Required for downloadReleasePackage operation.',
 			},
 
 			// ==================== Export: Projektdateien exportieren ====================
@@ -293,12 +223,6 @@ export class Altium365 implements INodeType {
 				name: 'exportType',
 				type: 'options',
 				required: true,
-				displayOptions: {
-					show: {
-						resource: ['export'],
-						operation: ['exportProjectFiles'],
-					},
-				},
 				options: [
 					{ name: 'Gerber', value: 'Gerber' },
 					{ name: 'Gerber X2', value: 'GerberX2' },
@@ -307,7 +231,7 @@ export class Altium365 implements INodeType {
 					{ name: 'Benutzerdefiniertes OutJob', value: 'CustomOutJob' },
 				],
 				default: 'Gerber',
-				description: 'Der Typ des zu erstellenden Projektexports',
+				description: 'The type of project export to create. Used for exportProjectFiles operation.',
 			},
 			{
 				displayName: 'OutJob-Inhalt',
@@ -316,16 +240,8 @@ export class Altium365 implements INodeType {
 				typeOptions: {
 					rows: 10,
 				},
-				required: true,
-				displayOptions: {
-					show: {
-						resource: ['export'],
-						operation: ['exportProjectFiles'],
-						exportType: ['CustomOutJob'],
-					},
-				},
 				default: '',
-				description: 'Der Inhalt einer Altium Designer OutJob-Datei',
+				description: 'The content of an Altium Designer OutJob file. Required when exportType is CustomOutJob.',
 				placeholder: 'Fügen Sie hier den OutJob-XML-Inhalt ein...',
 			},
 
@@ -335,112 +251,57 @@ export class Altium365 implements INodeType {
 				displayName: 'Paket-Name',
 				name: 'packageName',
 				type: 'string',
-				required: true,
-				displayOptions: {
-					show: {
-						resource: ['export'],
-						operation: ['createManufacturePackage'],
-					},
-				},
 				default: '',
-				description: 'Der Name für das Fertigungspaket',
+				description: 'The name for the manufacture package. Required for createManufacturePackage operation.',
 				placeholder: 'z.B. MeinFertigungspaket_v1.0',
 			},
 			{
 				displayName: 'Teilen mit (E-Mail-Adressen)',
 				name: 'shareWithEmails',
 				type: 'string',
-				required: true,
-				displayOptions: {
-					show: {
-						resource: ['export'],
-						operation: ['createManufacturePackage'],
-					},
-				},
 				default: '',
-				description: 'Kommagetrennte E-Mail-Adressen der Hersteller, mit denen geteilt werden soll',
+				description: 'Comma-separated email addresses of manufacturers to share with. Optional for createManufacturePackage operation.',
 				placeholder: 'hersteller1@example.com, hersteller2@example.com',
 			},
 			{
 				displayName: 'Paket-Beschreibung',
 				name: 'packageDescription',
 				type: 'string',
-				displayOptions: {
-					show: {
-						resource: ['export'],
-						operation: ['createManufacturePackage'],
-					},
-				},
 				default: '',
-				description: 'Optionale Beschreibung für das Paket',
+				description: 'Optional description for the package. Used for createManufacturePackage operation.',
 				placeholder: 'Optionale Beschreibung des Fertigungspakets',
 			},
 			{
 				displayName: 'Callback-URL',
 				name: 'callbackUrl',
 				type: 'string',
-				displayOptions: {
-					show: {
-						resource: ['export'],
-						operation: ['createManufacturePackage'],
-					},
-				},
 				default: '',
-				description:
-					'Optionale Webhook-URL. Bei Angabe wird Nexar das Ergebnis hierher POSTen, wenn das Paket fertig ist, und der Node kehrt sofort mit der Job-ID zurück, anstatt zu warten. Verwenden Sie eine n8n Webhook Trigger Node URL für asynchrone Workflows.',
+				description: 'Optional webhook URL. If provided, Nexar will POST the result here when the package is ready, and the node returns immediately with the job ID instead of waiting. Use an n8n Webhook Trigger Node URL for asynchronous workflows. Used for createManufacturePackage operation.',
 				placeholder: 'https://mein-n8n-instance.com/webhook/...',
 			},
 
 			// ==================== Export: Shared optional fields ====================
 
 			{
-				displayName: 'Varianten-Name oder ID',
+				displayName: 'Varianten-Name',
 				name: 'variantName',
-				type: 'options',
-				typeOptions: {
-					loadOptionsMethod: 'getVariants',
-					loadOptionsDependsOn: ['projectId'],
-				},
-				displayOptions: {
-					show: {
-						resource: ['export'],
-						operation: ['exportProjectFiles', 'createManufacturePackage'],
-					},
-				},
+				type: 'string',
 				default: '',
-				description:
-					'Wählen Sie eine Design-Variante oder lassen Sie leer für die Standardvariante. Wählen Sie aus der Liste oder geben Sie einen Namen mit einem <a href="https://docs.n8n.io/code/expressions/">Ausdruck</a> an.',
+				description: 'The exact variant name as a string. Optional for export operations.',
 			},
 			{
-				displayName: 'Revision',
+				displayName: 'Revision-ID',
 				name: 'revisionId',
-				type: 'options',
-				typeOptions: {
-					loadOptionsMethod: 'getRevisions',
-					loadOptionsDependsOn: ['projectId'],
-				},
-				displayOptions: {
-					show: {
-						resource: ['export'],
-						operation: ['exportProjectFiles', 'createManufacturePackage'],
-					},
-				},
+				type: 'string',
 				default: '',
-				description:
-					'Wählen Sie einen spezifischen Commit oder lassen Sie leer für die neueste Version. Wählen Sie aus der Liste oder geben Sie eine Revision-ID mit einem <a href="https://docs.n8n.io/code/expressions/">Ausdruck</a> an.',
+				description: 'The exact revision ID as a string. Optional for export operations; leave empty for latest version.',
 			},
 			{
 				displayName: 'Dateiname',
 				name: 'exportFileName',
 				type: 'string',
-				displayOptions: {
-					show: {
-						resource: ['export'],
-						operation: ['exportProjectFiles'],
-					},
-				},
 				default: '',
-				description: 'Optionaler Ausgabedateiname (z.B. "MeinExport.zip")',
+				description: 'Optional output filename (e.g., "MyExport.zip"). Used for exportProjectFiles operation.',
 				placeholder: 'z.B. MeinExport.zip',
 			},
 
@@ -450,34 +311,22 @@ export class Altium365 implements INodeType {
 				displayName: 'Timeout (Sekunden)',
 				name: 'timeout',
 				type: 'number',
-				displayOptions: {
-					show: {
-						resource: ['export'],
-						operation: ['exportProjectFiles', 'createManufacturePackage'],
-					},
-				},
 				typeOptions: {
 					minValue: 30,
 				},
 				default: 300,
-				description: 'Maximale Wartezeit bis zum Abschluss des Jobs (Standard 5 Minuten)',
+				description: 'Maximum wait time for job completion (default 5 minutes). Used for export operations.',
 			},
 			{
 				displayName: 'Abfrageintervall (Sekunden)',
 				name: 'pollInterval',
 				type: 'number',
-				displayOptions: {
-					show: {
-						resource: ['export'],
-						operation: ['exportProjectFiles', 'createManufacturePackage'],
-					},
-				},
 				typeOptions: {
 					minValue: 1,
 					maxValue: 30,
 				},
 				default: 5,
-				description: 'Wie oft der Job-Status überprüft werden soll',
+				description: 'How often to check the job status. Used for export operations.',
 			},
 		],
 	};

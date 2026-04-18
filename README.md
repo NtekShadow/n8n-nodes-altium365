@@ -1,5 +1,4 @@
-# Fork-Warnung
-Dies ist ein Fork der originalen n8n-nodes-altium. Diese Version wurde speziell für die Integration mit n8n AI Agents optimiert (verbesserte Tool-Metadaten und Ressourcen-Mapping).
+# Fork Notice: This is a fork of the original n8n-nodes-altium, modified specifically for n8n AI Agents (removed loadOptions, optimized parameter visibility for LLMs).
 
 # @ntek/n8n-nodes-altium365
 

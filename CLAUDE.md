@@ -4,7 +4,7 @@
 
 This is an n8n community node package that integrates Altium 365 with n8n workflows via the Nexar GraphQL API. The package provides both action nodes and trigger nodes for comprehensive workflow automation with Altium 365.
 
-**Current Version:** 1.3.1 (tagged in git as v1.3.1)
+**Current Version:** 1.3.2 (tagged in git as v1.3.2)
 
 **Package Name:** @ntek/n8n-nodes-altium365
 
@@ -266,7 +266,7 @@ Monitor: https://github.com/NtekShadow/n8n-nodes-altium365/actions
 ---
 
 **Last Updated:** 2026-03-31
-**Current Version:** 1.3.1
-**Current Tag:** v1.3.1
+**Current Version:** 1.3.2
+**Current Tag:** v1.3.2
 
 - When starting a new feature, add the test cases first (Test Driven Development) and then work on the actual code.
