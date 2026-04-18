@@ -28,7 +28,7 @@ export class Altium365Trigger implements INodeType {
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{$parameter["event"]}}',
-		description: 'Triggers on Altium 365 events via polling',
+		description: 'Löst aus bei Altium 365 Ereignissen über Polling',
 		defaults: {
 			name: 'Altium 365 Trigger',
 		},
@@ -43,34 +43,34 @@ export class Altium365Trigger implements INodeType {
 		polling: true,
 		properties: [
 			{
-				displayName: 'Event',
+				displayName: 'Ereignis',
 				name: 'event',
 				type: 'options',
 				options: [
 					{
-						name: 'Project Committed',
+						name: 'Projekt committet',
 						value: 'projectCommitted',
-						description: 'Trigger when a project is committed (Git push)',
+						description: 'Löst aus, wenn ein Projekt committet wird (Git Push)',
 					},
 					{
-						name: 'New Project',
+						name: 'Neues Projekt',
 						value: 'newProject',
-						description: 'Trigger when a new project is created',
+						description: 'Löst aus, wenn ein neues Projekt erstellt wird',
 					},
 					{
-						name: 'Component Updated',
+						name: 'Komponente aktualisiert',
 						value: 'componentUpdated',
 						description:
-							'Trigger when a library component is created or modified',
+							'Löst aus, wenn eine Bibliothekskomponente erstellt oder modifiziert wird',
 					},
 				],
 				default: 'projectCommitted',
 				required: true,
 			},
 
-			// Project ID filter for projectCommitted event
+			// Projekt-ID Filter für projectCommitted Ereignis
 			{
-				displayName: 'Project',
+				displayName: 'Projekt',
 				name: 'projectId',
 				type: 'resourceLocator',
 				default: { mode: 'list', value: '' },
@@ -79,20 +79,20 @@ export class Altium365Trigger implements INodeType {
 						event: ['projectCommitted'],
 					},
 				},
-				description: 'Select a specific project to monitor, or leave empty to monitor all.',
+				description: 'Wählen Sie ein spezifisches Projekt zur Überwachung oder lassen Sie leer, um alle zu überwachen.',
 				modes: [
 					{
-						displayName: 'From List',
+						displayName: 'Aus Liste',
 						name: 'list',
 						type: 'list',
-						placeholder: 'Select a project...',
+						placeholder: 'Projekt auswählen...',
 						typeOptions: {
 							searchListMethod: 'searchProjects',
 							searchable: true,
 						},
 					},
 					{
-						displayName: 'By ID',
+						displayName: 'Nach ID',
 						name: 'id',
 						type: 'string',
 						placeholder: 'grid:workspace:...:design:project/...',
@@ -100,9 +100,9 @@ export class Altium365Trigger implements INodeType {
 				],
 			},
 
-			// Include file changes option
+			// Option für Dateiänderungen einschließen
 			{
-				displayName: 'Include File Changes',
+				displayName: 'Dateiänderungen einschließen',
 				name: 'includeFileChanges',
 				type: 'boolean',
 				displayOptions: {
@@ -111,25 +111,25 @@ export class Altium365Trigger implements INodeType {
 					},
 				},
 				default: true,
-				description: 'Whether to include the list of changed files in the output',
+				description: 'Gibt an, ob die Liste der geänderten Dateien in der Ausgabe enthalten sein soll',
 			},
 
-			// Poll interval throttle (n8n only offers 1min or 1hr natively)
+			// Poll-Intervall Drosselung (n8n bietet standardmäßig nur 1min oder 1h)
 			{
-				displayName: 'Minimum Poll Interval',
+				displayName: 'Minimales Abfrageintervall',
 				name: 'pollIntervalMinutes',
 				type: 'options',
 				options: [
 					{ name: '1 Minute', value: 1 },
-					{ name: '5 Minutes', value: 5 },
-					{ name: '10 Minutes', value: 10 },
-					{ name: '15 Minutes', value: 15 },
-					{ name: '30 Minutes', value: 30 },
-					{ name: '1 Hour', value: 60 },
+					{ name: '5 Minuten', value: 5 },
+					{ name: '10 Minuten', value: 10 },
+					{ name: '15 Minuten', value: 15 },
+					{ name: '30 Minuten', value: 30 },
+					{ name: '1 Stunde', value: 60 },
 				],
 				default: 5,
 				description:
-					'Minimum time between API polls. Set n8n Poll Times to "Every Minute" and this controls the actual interval.',
+					'Mindeste Zeit zwischen API-Abfragen. Setzen Sie n8n Poll Times auf "Jede Minute" und dies kontrolliert das tatsächliche Intervall.',
 			},
 		],
 	};
