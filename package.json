@@ -1,5 +1,5 @@
 {
-  "name": "@jonmash/n8n-nodes-altium365",
+  "name": "@ntek/n8n-nodes-altium365",
   "version": "0.13.0",
   "description": "n8n community node for Altium 365 via Nexar API",
   "keywords": [
@@ -13,14 +13,14 @@
     "ecad"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/jonmash/n8n-nodes-altium365",
+  "homepage": "https://github.com/NtekShadow/n8n-nodes-altium365",
   "author": {
-    "name": "Jon Mash",
-    "email": "jonmash@gmail.com"
+    "name": "Ntek",
+    "email": "ntek@example.com"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jonmash/n8n-nodes-altium365.git"
+    "url": "git+https://github.com/NtekShadow/n8n-nodes-altium365.git"
   },
   "engines": {
     "node": ">=18.17.0"

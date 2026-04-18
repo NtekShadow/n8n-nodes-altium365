@@ -6,9 +6,9 @@ This is an n8n community node package that integrates Altium 365 with n8n workfl
 
 **Current Version:** 0.12.0 (tagged in git as v0.12.0)
 
-**Package Name:** @jonmash/n8n-nodes-altium365
+**Package Name:** @ntek/n8n-nodes-altium365
 
-**Repository:** https://github.com/jonmash/n8n-nodes-altium365
+**Repository:** https://github.com/NtekShadow/n8n-nodes-altium365
 
 ## Current Status
 
@@ -220,7 +220,7 @@ npm run format       # prettier
    ```
 4. GitHub Actions publishes to npm via OIDC trusted publishing (no token needed)
 
-Monitor: https://github.com/jonmash/n8n-nodes-altium365/actions
+Monitor: https://github.com/NtekShadow/n8n-nodes-altium365/actions
 
 ---
 

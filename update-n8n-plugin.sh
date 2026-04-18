@@ -25,17 +25,17 @@ echo ""
 echo "📦 Checking current version..."
 
 # Get current version
-CURRENT_VERSION=$(docker exec "$CONTAINER_ID" sh -c "cd /home/node/.n8n/nodes && npm list @jonmash/n8n-nodes-altium365 --depth=0 2>/dev/null | grep @jonmash/n8n-nodes-altium365 | cut -d@ -f3" || echo "unknown")
+CURRENT_VERSION=$(docker exec "$CONTAINER_ID" sh -c "cd /home/node/.n8n/nodes && npm list @ntek/n8n-nodes-altium365 --depth=0 2>/dev/null | grep @ntek/n8n-nodes-altium365 | cut -d@ -f3" || echo "unknown")
 echo "📌 Current version: $CURRENT_VERSION"
 
 echo ""
 echo "🧹 Clearing npm cache..."
 docker exec "$CONTAINER_ID" sh -c "npm cache clean --force" > /dev/null 2>&1
 
-echo "🔍 Updating @jonmash/n8n-nodes-altium365..."
+echo "🔍 Updating @ntek/n8n-nodes-altium365..."
 
 # Capture npm update output - use install with @latest to force fresh fetch
-UPDATE_OUTPUT=$(docker exec "$CONTAINER_ID" sh -c "cd /home/node/.n8n/nodes && npm install @jonmash/n8n-nodes-altium365@latest --force 2>&1")
+UPDATE_OUTPUT=$(docker exec "$CONTAINER_ID" sh -c "cd /home/node/.n8n/nodes && npm install @ntek/n8n-nodes-altium365@latest --force 2>&1")
 UPDATE_EXIT_CODE=$?
 
 if [ $UPDATE_EXIT_CODE -ne 0 ]; then
@@ -45,7 +45,7 @@ if [ $UPDATE_EXIT_CODE -ne 0 ]; then
 fi
 
 # Get new version
-NEW_VERSION=$(docker exec "$CONTAINER_ID" sh -c "cd /home/node/.n8n/nodes && npm list @jonmash/n8n-nodes-altium365 --depth=0 2>/dev/null | grep @jonmash/n8n-nodes-altium365 | cut -d@ -f3" || echo "unknown")
+NEW_VERSION=$(docker exec "$CONTAINER_ID" sh -c "cd /home/node/.n8n/nodes && npm list @ntek/n8n-nodes-altium365 --depth=0 2>/dev/null | grep @ntek/n8n-nodes-altium365 | cut -d@ -f3" || echo "unknown")
 
 echo "📌 New version: $NEW_VERSION"
 
@@ -55,7 +55,7 @@ if [ "$CURRENT_VERSION" = "$NEW_VERSION" ]; then
     echo "ℹ️  No update available - already on version $CURRENT_VERSION"
     echo ""
     echo "💡 If you just published a new version, npm registry may need a few minutes to sync"
-    echo "   Try again in 1-2 minutes, or check: https://www.npmjs.com/package/@jonmash/n8n-nodes-altium365"
+    echo "   Try again in 1-2 minutes, or check: https://www.npmjs.com/package/@ntek/n8n-nodes-altium365"
     echo ""
     echo "⏭️  Skipping container restart (no changes detected)"
     exit 0
