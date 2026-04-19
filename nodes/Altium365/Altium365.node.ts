@@ -60,7 +60,23 @@ export class Altium365 implements INodeType {
 				typeOptions: {
 					rows: 10,
 				},
-				description: 'Provide a JSON payload with keys like resource, operation, and any additional operation parameters.',
+				description: `Provide a JSON object with "resource", "operation", and any additional parameters required by that operation. 
+
+WORKSPACE OPERATIONS:
+• workspace.getAll: Returns all workspaces. No params needed. Example: {"resource":"workspace","operation":"getAll"}
+
+PROJECT OPERATIONS:
+• project.get: Get a single project by ID. Required: projectId. Example: {"resource":"project","operation":"get","projectId":"proj-123"}
+• project.getSimplified: Get project with simplified response (id, name, description, etc). Required: projectId. Example: {"resource":"project","operation":"getSimplified","projectId":"proj-123"}
+• project.getMany: List all projects in workspace. Optional: returnAll (bool, default false), limit (number, default 10). Example: {"resource":"project","operation":"getMany","returnAll":true}
+• project.getLatestCommit: Get the latest commit of a project. Required: projectId. Example: {"resource":"project","operation":"getLatestCommit","projectId":"proj-123"}
+• project.getCommitHistory: Get commit history. Required: projectId. Optional: returnAll (bool), limit (number). Example: {"resource":"project","operation":"getCommitHistory","projectId":"proj-123","limit":20}
+• project.updateParameters: Update project parameters. Required: projectId, parameters (array of {name, value} objects). Optional: replaceExisting (bool, default false). Example: {"resource":"project","operation":"updateParameters","projectId":"proj-123","parameters":[{"name":"param1","value":"val1"}],"replaceExisting":false}
+
+EXPORT OPERATIONS:
+• export.downloadReleasePackage: Get release details with variants. Required: releaseId. Example: {"resource":"export","operation":"downloadReleasePackage","releaseId":"rel-456"}
+• export.exportProjectFiles: Create and poll export job. Required: projectId, exportType. Optional: variantName, revisionId, exportFileName, outJobContent, timeout (sec, default 300), pollInterval (sec, default 5). ExportType can be: Gerber, GerberX2, IDF, NCDrill, CustomOutJob. Example: {"resource":"export","operation":"exportProjectFiles","projectId":"proj-123","exportType":"Gerber","timeout":300,"pollInterval":5}
+• export.createManufacturePackage: Create manufacture package. Required: projectId, packageName, shareWithEmails (comma-separated). Optional: packageDescription, variantName, revisionId, callbackUrl (for async webhook mode), timeout (default 300), pollInterval (default 5). Example: {"resource":"export","operation":"createManufacturePackage","projectId":"proj-123","packageName":"PCB Package","shareWithEmails":"user@example.com"}`,
 			},
 		],
 	};
