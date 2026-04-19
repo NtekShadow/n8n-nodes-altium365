@@ -22,7 +22,7 @@ WORKSPACE OPERATIONS:
 PROJECT OPERATIONS:
 • get: Get a single project by ID. Required: projectId. Example: {"resource":"project","operation":"get","projectId":"proj-123"}
 • getSimplified: Get project with simplified response (id, name, description, etc). Required: projectId. Example: {"resource":"project","operation":"getSimplified","projectId":"proj-123"}
-• getMany: List all projects in workspace. Optional: returnAll (bool, default false), limit (number, default 10). Example: {"resource":"project","operation":"getMany","returnAll":true}
+• getMany: List projects in workspace. Returns up to 100 projects by default. If the project you're looking for is not in the list, the results may be truncated — set a higher 'limit' (e.g., 500) or use 'returnAll':true to fetch all projects. Optional: returnAll (bool, default false), limit (number, default 100). Example: {"resource":"project","operation":"getMany","limit":500}
 • getLatestCommit: Get the latest commit of a project. Required: projectId. Example: {"resource":"project","operation":"getLatestCommit","projectId":"proj-123"}
 • getCommitHistory: Get commit history. Required: projectId. Optional: returnAll (bool), limit (number). Example: {"resource":"project","operation":"getCommitHistory","projectId":"proj-123","limit":20}
 • updateParameters: Update project parameters. Required: projectId, parameters (array of {name, value} objects). Optional: replaceExisting (bool, default false). Example: {"resource":"project","operation":"updateParameters","projectId":"proj-123","parameters":[{"name":"param1","value":"val1"}],"replaceExisting":false}
@@ -337,25 +337,54 @@ export class Altium365 implements INodeType {
 					}
 
 					if (operation === 'getMany') {
-						const returnAll = params.returnAll as boolean;
-						const limit = params.limit as number;
+						const returnAll = (params.returnAll as boolean) ?? false;
+						const limit = (params.limit as number) ?? 100;
 						const workspaceUrl = credentials.workspaceUrl as string;
 
-						const result = await sdk.GetProjects({
-							workspaceUrl,
-							first: returnAll ? undefined : limit,
-						});
+						if (returnAll) {
+							// Fetch all projects with pagination
+							let allProjects: any[] = [];
+							let hasNextPage = true;
+							let after: string | undefined = undefined;
 
-						if (!result.desProjects?.nodes) {
-							throw new NodeOperationError(this.getNode(), 'No projects found');
-						}
+							while (hasNextPage) {
+								const result = await sdk.GetProjects({
+									workspaceUrl,
+									first: 50,
+									after,
+								});
 
-						result.desProjects.nodes.forEach((project) => {
-							returnData.push({
-								json: project,
-								pairedItem: { item: i },
+								if (result.desProjects?.nodes) {
+									allProjects.push(...result.desProjects.nodes);
+								}
+
+								hasNextPage = result.desProjects?.pageInfo.hasNextPage ?? false;
+								after = result.desProjects?.pageInfo.endCursor ?? undefined;
+							}
+
+							allProjects.forEach((project) => {
+								returnData.push({
+									json: project,
+									pairedItem: { item: i },
+								});
 							});
-						});
+						} else {
+							const result = await sdk.GetProjects({
+								workspaceUrl,
+								first: limit,
+							});
+
+							if (!result.desProjects?.nodes) {
+								throw new NodeOperationError(this.getNode(), 'No projects found');
+							}
+
+							result.desProjects.nodes.forEach((project) => {
+								returnData.push({
+									json: project,
+									pairedItem: { item: i },
+								});
+							});
+						}
 					}
 
 					if (operation === 'getLatestCommit') {
