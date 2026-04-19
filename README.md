@@ -124,18 +124,30 @@ The trigger outputs:
 ### Example: Get Project Details
 
 1. Add **Altium 365** action node
-2. Select resource: **Project**
-3. Select operation: **Get**
-4. Enter the **Project ID**
+2. Enter the JSON payload in the **Agent Payload** field, for example:
+
+```json
+{
+  "resource": "project",
+  "operation": "get",
+  "projectId": "grid:workspace:...:design:project/..."
+}
+```
 
 Returns complete project information including metadata, parameters, and variant count.
 
 ### Example: List All Projects
 
 1. Add **Altium 365** action node
-2. Select resource: **Project**
-3. Select operation: **Get Many**
-4. Choose **Return All** or set a **Limit**
+2. Enter the JSON payload in the **Agent Payload** field, for example:
+
+```json
+{
+  "resource": "project",
+  "operation": "getMany",
+  "limit": 50
+}
+```
 
 Returns paginated list of all projects in your workspace.
 

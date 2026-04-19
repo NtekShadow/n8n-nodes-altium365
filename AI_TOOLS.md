@@ -9,7 +9,7 @@ Die Altium 365 Nodes bieten strukturierte APIs für:
 - Dateiexporte (Gerber, PCB, etc.)
 - Fertigungspaket-Erstellung
 - Ereignis-Trigger für Commits und neue Projekte
-
+This action node is agent-only and exposes a single `Agent Payload` field. Agents must provide a JSON object with `resource`, `operation`, and any additional arguments required for that operation.
 **✅ AI Agent Kompatibilität**: Die Action-Nodes sind mit `usableAsTool: true` konfiguriert und können von AI Modellen wie Gemini, GPT-4, Claude, etc. als Tools verwendet werden.
 
 ## Verfügbare Tools

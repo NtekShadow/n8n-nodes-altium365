@@ -37,7 +37,7 @@ export class Altium365 implements INodeType {
 		icon: 'file:altium365.svg',
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
+		subtitle: 'AI Agent Tool',
 		description: 'Interagiert mit Altium 365 über die Nexar API für Projektmanagement, Exporte und Workspace-Operationen',
 		defaults: {
 			name: 'Altium 365',
@@ -53,280 +53,14 @@ export class Altium365 implements INodeType {
 		],
 		properties: [
 			{
-				displayName: 'Ressource',
-				name: 'resource',
-				type: 'options',
-				noDataExpression: true,
-				required: true,
-				description: 'The resource to operate on. Send "project" for project management operations (get details, commits, updates), "export" for export operations (Gerber, NCDrill, packages), "workspace" for workspace information.',
-				options: [
-					{
-						name: 'Export',
-						value: 'export',
-					},
-					{
-						name: 'Projekt',
-						value: 'project',
-					},
-					{
-						name: 'Workspace',
-						value: 'workspace',
-					},
-				],
-				default: 'project',
-			},
-			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				required: true,
-				description: 'The operation to perform. For resource "project": send "get" to retrieve full project details, "getSimplified" for basic info (ID, name, description, status), "getMany" for paginated list, "getLatestCommit" for latest commit, "getCommitHistory" for commit history, "updateParameters" to update project parameters. For "export": "downloadReleasePackage" for release downloads, "exportProjectFiles" for Gerber/NCDrill exports, "createManufacturePackage" for manufacture packages. For "workspace": "getAll" to get all workspaces.',
-				options: [
-					// Project operations
-					{
-						name: 'Projekt abrufen',
-						value: 'get',
-					},
-					{
-						name: 'Projekt abrufen (vereinfacht)',
-						value: 'getSimplified',
-					},
-					{
-						name: 'Projekte abrufen (mehrere)',
-						value: 'getMany',
-					},
-					{
-						name: 'Neuesten Commit abrufen',
-						value: 'getLatestCommit',
-					},
-					{
-						name: 'Commit-Verlauf abrufen',
-						value: 'getCommitHistory',
-					},
-					{
-						name: 'Parameter aktualisieren',
-						value: 'updateParameters',
-					},
-					// Export operations
-					{
-						name: 'Release-Paket herunterladen',
-						value: 'downloadReleasePackage',
-					},
-					{
-						name: 'Projektdateien exportieren',
-						value: 'exportProjectFiles',
-					},
-					{
-						name: 'Fertigungspaket erstellen',
-						value: 'createManufacturePackage',
-					},
-					// Workspace operations
-					{
-						name: 'Alle Workspaces abrufen',
-						value: 'getAll',
-					},
-				],
-				default: 'get',
-			},
-
-			// ==================== Shared fields ====================
-
-			// Projekt-ID (verwendet von Projekt- und Export-Operationen)
-			{
-				displayName: 'Projekt-ID',
-				name: 'projectId',
-				type: 'string',
+				displayName: 'Agent Payload',
+				name: 'agentPayload',
+				type: 'json',
 				default: '',
-				description: 'The exact project ID as a string (e.g., "grid:workspace:...:design:project/..."). Required for project and export operations.',
-			},
-
-			// Limit-Feld
-			{
-				displayName: 'Limit',
-				name: 'limit',
-				type: 'number',
-				typeOptions: {
-					minValue: 1,
-				},
-				default: 50,
-				description: 'Maximum number of results to return. Used for getMany and getCommitHistory operations.',
-			},
-
-			// Alle zurückgeben Toggle
-			{
-				displayName: 'Alle zurückgeben',
-				name: 'returnAll',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to return all results or limit to a specific number. Used for getMany and getCommitHistory operations.',
-			},
-
-			// ==================== Projekt: Parameter aktualisieren ====================
-
-			{
-				displayName: 'Parameter',
-				name: 'parameters',
-				type: 'fixedCollection',
-				typeOptions: {
-					multipleValues: true,
-				},
-				default: {},
-				description: 'The parameters to set for the project. Used for updateParameters operation.',
-				options: [
-					{
-						name: 'parameter',
-						displayName: 'Parameter',
-						values: [
-							{
-								displayName: 'Name',
-								name: 'name',
-								type: 'string',
-								default: '',
-								description: 'Parameter-Name',
-								placeholder: 'z.B. DesignRuleCheck',
-							},
-							{
-								displayName: 'Wert',
-								name: 'value',
-								type: 'string',
-								default: '',
-								description: 'Parameter-Wert',
-								placeholder: 'z.B. Enabled',
-							},
-						],
-					},
-				],
-			},
-			{
-				displayName: 'Vorhandene ersetzen',
-				name: 'replaceExisting',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to replace all existing parameters. If disabled, parameters are appended or updated by name. Used for updateParameters operation.',
-			},
-
-			// ==================== Export: Release-Paket herunterladen ====================
-
-			{
-				displayName: 'Release-ID',
-				name: 'releaseId',
-				type: 'string',
-				default: '',
-				description: 'The exact release ID as a string. Required for downloadReleasePackage operation.',
-			},
-
-			// ==================== Export: Projektdateien exportieren ====================
-
-			{
-				displayName: 'Export-Typ',
-				name: 'exportType',
-				type: 'options',
-				required: true,
-				options: [
-					{ name: 'Gerber', value: 'Gerber' },
-					{ name: 'Gerber X2', value: 'GerberX2' },
-					{ name: 'IDF', value: 'IDF' },
-					{ name: 'NC Drill', value: 'NCDrill' },
-					{ name: 'Benutzerdefiniertes OutJob', value: 'CustomOutJob' },
-				],
-				default: 'Gerber',
-				description: 'The type of project export to create. Used for exportProjectFiles operation.',
-			},
-			{
-				displayName: 'OutJob-Inhalt',
-				name: 'outJobContent',
-				type: 'string',
 				typeOptions: {
 					rows: 10,
 				},
-				default: '',
-				description: 'The content of an Altium Designer OutJob file. Required when exportType is CustomOutJob.',
-				placeholder: 'Fügen Sie hier den OutJob-XML-Inhalt ein...',
-			},
-
-			// ==================== Export: Create Manufacture Package ====================
-
-			{
-				displayName: 'Paket-Name',
-				name: 'packageName',
-				type: 'string',
-				default: '',
-				description: 'The name for the manufacture package. Required for createManufacturePackage operation.',
-				placeholder: 'z.B. MeinFertigungspaket_v1.0',
-			},
-			{
-				displayName: 'Teilen mit (E-Mail-Adressen)',
-				name: 'shareWithEmails',
-				type: 'string',
-				default: '',
-				description: 'Comma-separated email addresses of manufacturers to share with. Optional for createManufacturePackage operation.',
-				placeholder: 'hersteller1@example.com, hersteller2@example.com',
-			},
-			{
-				displayName: 'Paket-Beschreibung',
-				name: 'packageDescription',
-				type: 'string',
-				default: '',
-				description: 'Optional description for the package. Used for createManufacturePackage operation.',
-				placeholder: 'Optionale Beschreibung des Fertigungspakets',
-			},
-			{
-				displayName: 'Callback-URL',
-				name: 'callbackUrl',
-				type: 'string',
-				default: '',
-				description: 'Optional webhook URL. If provided, Nexar will POST the result here when the package is ready, and the node returns immediately with the job ID instead of waiting. Use an n8n Webhook Trigger Node URL for asynchronous workflows. Used for createManufacturePackage operation.',
-				placeholder: 'https://mein-n8n-instance.com/webhook/...',
-			},
-
-			// ==================== Export: Shared optional fields ====================
-
-			{
-				displayName: 'Varianten-Name',
-				name: 'variantName',
-				type: 'string',
-				default: '',
-				description: 'The exact variant name as a string. Optional for export operations.',
-			},
-			{
-				displayName: 'Revision-ID',
-				name: 'revisionId',
-				type: 'string',
-				default: '',
-				description: 'The exact revision ID as a string. Optional for export operations; leave empty for latest version.',
-			},
-			{
-				displayName: 'Dateiname',
-				name: 'exportFileName',
-				type: 'string',
-				default: '',
-				description: 'Optional output filename (e.g., "MyExport.zip"). Used for exportProjectFiles operation.',
-				placeholder: 'z.B. MeinExport.zip',
-			},
-
-			// ==================== Export: Async job settings ====================
-
-			{
-				displayName: 'Timeout (Sekunden)',
-				name: 'timeout',
-				type: 'number',
-				typeOptions: {
-					minValue: 30,
-				},
-				default: 300,
-				description: 'Maximum wait time for job completion (default 5 minutes). Used for export operations.',
-			},
-			{
-				displayName: 'Abfrageintervall (Sekunden)',
-				name: 'pollInterval',
-				type: 'number',
-				typeOptions: {
-					minValue: 1,
-					maxValue: 30,
-				},
-				default: 5,
-				description: 'How often to check the job status. Used for export operations.',
+				description: 'Provide a JSON payload with keys like resource, operation, and any additional operation parameters.',
 			},
 		],
 	};
@@ -445,8 +179,33 @@ export class Altium365 implements INodeType {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
 
-		const resource = this.getNodeParameter('resource', 0) as string;
-		const operation = this.getNodeParameter('operation', 0) as string;
+		const agentPayload = this.getNodeParameter('agentPayload', 0);
+		let resource: string;
+		let operation: string;
+		let params: Record<string, unknown> = {};
+
+		if (agentPayload === undefined || agentPayload === null || (typeof agentPayload === 'string' && !agentPayload.trim())) {
+			throw new NodeOperationError(this.getNode(), 'Agent Payload is required and must be valid JSON');
+		}
+
+		if (typeof agentPayload === 'string') {
+			try {
+				params = JSON.parse(agentPayload);
+			} catch (error) {
+				throw new NodeOperationError(this.getNode(), `Invalid JSON in agentPayload: ${(error as Error).message}`);
+			}
+		} else if (typeof agentPayload === 'object') {
+			params = agentPayload as Record<string, unknown>;
+		}
+
+		if (!params || typeof params !== 'object' || Array.isArray(params)) {
+			throw new NodeOperationError(this.getNode(), 'Agent Payload must be a JSON object');
+		}
+		resource = params.resource as string;
+		operation = params.operation as string;
+		if (!resource || !operation) {
+			throw new NodeOperationError(this.getNode(), 'Agent Payload must include resource and operation');
+		}
 
 		const credentials = await this.getCredentials('altium365NexarApi');
 		const apiUrl = credentials.apiEndpointUrl as string;
@@ -475,7 +234,7 @@ export class Altium365 implements INodeType {
 
 				if (resource === 'project') {
 					if (operation === 'get') {
-						const projectId = this.getNodeParameter('projectId', i, '', { extractValue: true }) as string;
+						const projectId = params.projectId as string;
 						const result = await sdk.GetProjectById({ id: projectId });
 
 						if (!result.desProjectById) {
@@ -492,7 +251,7 @@ export class Altium365 implements INodeType {
 					}
 
 					if (operation === 'getSimplified') {
-						const projectId = this.getNodeParameter('projectId', i, '', { extractValue: true }) as string;
+						const projectId = params.projectId as string;
 						const result = await sdk.GetProjectById({ id: projectId });
 
 						if (!result.desProjectById) {
@@ -526,8 +285,8 @@ export class Altium365 implements INodeType {
 					}
 
 					if (operation === 'getMany') {
-						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
-						const limit = this.getNodeParameter('limit', i, 50) as number;
+						const returnAll = params.returnAll as boolean;
+						const limit = params.limit as number;
 						const workspaceUrl = credentials.workspaceUrl as string;
 
 						const result = await sdk.GetProjects({
@@ -548,7 +307,7 @@ export class Altium365 implements INodeType {
 					}
 
 					if (operation === 'getLatestCommit') {
-						const projectId = this.getNodeParameter('projectId', i, '', { extractValue: true }) as string;
+						const projectId = params.projectId as string;
 						const result = await sdk.GetLatestCommit({ projectId });
 
 						if (!result.desProjectById?.latestRevision) {
@@ -569,9 +328,9 @@ export class Altium365 implements INodeType {
 					}
 
 					if (operation === 'getCommitHistory') {
-						const projectId = this.getNodeParameter('projectId', i, '', { extractValue: true }) as string;
-						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
-						const limit = this.getNodeParameter('limit', i, 50) as number;
+						const projectId = params.projectId as string;
+						const returnAll = params.returnAll as boolean;
+						const limit = params.limit as number;
 
 						const result = await sdk.GetCommitHistory({
 							projectId,
@@ -598,11 +357,11 @@ export class Altium365 implements INodeType {
 					}
 
 					if (operation === 'updateParameters') {
-						const projectId = this.getNodeParameter('projectId', i, '', { extractValue: true }) as string;
-						const parametersData = this.getNodeParameter('parameters', i) as {
+						const projectId = params.projectId as string;
+						const parametersData = params.parameters as {
 							parameter?: Array<{ name: string; value: string }>;
 						};
-						const replaceExisting = this.getNodeParameter('replaceExisting', i, false) as boolean;
+						const replaceExisting = params.replaceExisting as boolean;
 						const parameters = parametersData.parameter ?? [];
 
 						if (parameters.length === 0) {
@@ -635,7 +394,7 @@ export class Altium365 implements INodeType {
 
 				if (resource === 'export') {
 					if (operation === 'downloadReleasePackage') {
-						const releaseId = this.getNodeParameter('releaseId', i) as string;
+						const releaseId = params.releaseId as string;
 
 						const result = await sdk.GetReleaseById({ id: releaseId });
 
@@ -659,23 +418,16 @@ export class Altium365 implements INodeType {
 					}
 
 					if (operation === 'exportProjectFiles') {
-						const projectId = this.getNodeParameter('projectId', i, '', { extractValue: true }) as string;
-						const exportType = this.getNodeParameter('exportType', i) as string;
-						const variantName = this.getNodeParameter('variantName', i, '') as string;
-						const revisionId = this.getNodeParameter('revisionId', i, '') as string;
-						const fileName = this.getNodeParameter(
-							'exportFileName',
-							i,
-							'',
-						) as string;
-						const timeout = this.getNodeParameter('timeout', i, 300) as number;
-						const pollIntervalSec = this.getNodeParameter(
-							'pollInterval',
-							i,
-							5,
-						) as number;
+						const projectId = params.projectId as string;
+						const exportType = params.exportType as string;
+						const variantName = params.variantName as string;
+						const revisionId = params.revisionId as string;
+						const fileName = params.exportFileName as string;
+						const timeout = params.timeout as number;
+						const pollIntervalSec = params.pollInterval as number;
+						const outJobContent = params.outJobContent as string;
 
-						const input: Record<string, unknown> = {
+						const input: any = {
 							projectId,
 							variantName: variantName || undefined,
 							vcsRevisionId: revisionId || undefined,
@@ -697,10 +449,6 @@ export class Altium365 implements INodeType {
 								input.exportNCDrill = fileNameOpt;
 								break;
 							case 'CustomOutJob': {
-								const outJobContent = this.getNodeParameter(
-									'outJobContent',
-									i,
-								) as string;
 								input.exportAny = {
 									outJobContent,
 									...(fileName ? { fileName } : {}),
@@ -758,42 +506,19 @@ export class Altium365 implements INodeType {
 					}
 
 					if (operation === 'createManufacturePackage') {
-						const projectId = this.getNodeParameter('projectId', i, '', { extractValue: true }) as string;
-						const packageName = this.getNodeParameter('packageName', i) as string;
-						const shareWithRaw = this.getNodeParameter(
-							'shareWithEmails',
-							i,
-						) as string;
+						const projectId = params.projectId as string;
+						const packageName = params.packageName as string;
+						const shareWithRaw = params.shareWithEmails as string;
 						const shareWith = shareWithRaw
 							.split(',')
-							.map((e) => e.trim())
+							.map((e: string) => e.trim())
 							.filter(Boolean);
-						const description = this.getNodeParameter(
-							'packageDescription',
-							i,
-							'',
-						) as string;
-						const variantName = this.getNodeParameter(
-							'variantName',
-							i,
-							'',
-						) as string;
-						const revisionId = this.getNodeParameter(
-							'revisionId',
-							i,
-							'',
-						) as string;
-						const callbackUrl = this.getNodeParameter(
-							'callbackUrl',
-							i,
-							'',
-						) as string;
-						const timeout = this.getNodeParameter('timeout', i, 300) as number;
-						const pollIntervalSec = this.getNodeParameter(
-							'pollInterval',
-							i,
-							5,
-						) as number;
+						const description = params.packageDescription as string;
+						const variantName = params.variantName as string;
+						const revisionId = params.revisionId as string;
+						const callbackUrl = params.callbackUrl as string;
+						const timeout = params.timeout as number;
+						const pollIntervalSec = params.pollInterval as number;
 
 						log(
 							'Altium365',
